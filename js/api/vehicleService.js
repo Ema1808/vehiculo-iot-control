@@ -16,6 +16,16 @@ class VehicleService {
     return await this.client.get(CONFIG.ENDPOINTS.ESTADO);
   }
 
+  // Consulta detallada del último estado real
+  async getEstado() {
+    return await this.client.get(CONFIG.ENDPOINTS.ESTADO);
+  }
+
+  // Consulta de los 10 movimientos individuales más recientes (sp_obtener_historial)
+  async getHistorial() {
+    return await this.client.get(CONFIG.ENDPOINTS.HISTORIAL);
+  }
+
   // 3. Catálogo de Comandos del Vehículo
   async getComandos() {
     return await this.client.get(CONFIG.ENDPOINTS.COMANDOS);

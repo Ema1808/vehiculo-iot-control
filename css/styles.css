@@ -122,3 +122,37 @@ body {
     left: calc(50% - 35px);
   }
 }
+
+/* Pestañas de Navegación */
+.btn-view-tab {
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.btn-view-tab.active {
+  background-color: var(--color-primary) !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.4);
+}
+
+/* Tabla de Historial de Monitoreo */
+.table-dark {
+  --bs-table-bg: transparent;
+  --bs-table-striped-bg: rgba(255, 255, 255, 0.02);
+  --bs-table-hover-bg: rgba(2, 132, 199, 0.1);
+}
+
+.table th, .table td {
+  padding: 0.6rem 0.75rem;
+  white-space: nowrap;
+}
+
+.view-panel {
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}

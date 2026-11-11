@@ -15,6 +15,7 @@ export const CONFIG = {
   ENDPOINTS: {
     HEALTH: "/",
     ESTADO: "/vehiculos/1/estado",
+    HISTORIAL: "/vehiculos/1/historial",
     COMANDOS: "/vehiculos/1/comandos",
     MOVIMIENTO: "/vehiculos/1/movimiento",
     DEMOS: "/vehiculos/1/demos",

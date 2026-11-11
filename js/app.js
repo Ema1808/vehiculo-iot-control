@@ -5,10 +5,13 @@ import { StatusPanel } from "./components/statusPanel.js";
 import { VirtualJoystick } from "./components/joystick.js";
 import { ActionButtons } from "./components/actionButtons.js";
 import { DemoController } from "./components/demoController.js";
+import { Navigation } from "./components/navigation.js";
+import { MonitoringView } from "./components/monitoringView.js";
 
 class App {
   constructor() {
     this.statusPanel = new StatusPanel();
+
     // Catálogo precargado por defecto para tolerancia a fallos y respuesta inmediata
     this.catalogMap = new Map([
       ["AVANZAR", 1],
@@ -23,22 +26,29 @@ class App {
     ]);
     this.isSending = false;
 
+    // Componentes de la vista de Control
     this.demoController = new DemoController(
       this.handleStartDemo.bind(this),
       this.handleCancelDemo.bind(this)
     );
-
     this.actionButtons = new ActionButtons(this.handleCommandName.bind(this));
     this.joystick = new VirtualJoystick("joystick-base", "joystick-knob", this.handleJoystickDirection.bind(this));
+
+    // Componente de la vista de Monitoreo
+    this.monitoringView = new MonitoringView();
+
+    // Gestor de Navegación entre Vistas
+    this.navigation = new Navigation(this.handleViewChange.bind(this));
   }
 
   async init() {
-    console.log("Iniciando aplicación de control IoT...");
+    console.log("Iniciando aplicación de control y monitoreo IoT...");
     document.getElementById("txt-vehicle-id").textContent = `${CONFIG.VEHICLE_NAME} · ID: ${CONFIG.VEHICLE_ID}`;
 
     this._bindGlobalEvents();
     this._setupWebSocket();
     await this._loadInitialData();
+    await this.monitoringView.loadAll(); // Carga inicial de monitoreo
     this._startHealthPolling();
   }
 
@@ -49,12 +59,13 @@ class App {
       btnStop.addEventListener("click", () => this.handleCommandName("DETENER"));
     }
 
-    // Botón refrescar diagnósticos y catálogo
+    // Botón refrescar diagnósticos, catálogo e historial
     const btnRefresh = document.getElementById("btn-refresh-status");
     if (btnRefresh) {
       btnRefresh.addEventListener("click", () => {
         this._runDiagnostics();
         this._loadInitialData();
+        this.monitoringView.loadAll();
         wsClient.connect();
       });
     }
@@ -63,25 +74,57 @@ class App {
   _setupWebSocket() {
     wsClient.onStatusChange(status => {
       this.statusPanel.setWsStatus(status);
+      // Al reconectar exitosamente, resincronizar estado e historial con la API REST
+      if (status === "ONLINE") {
+        this.monitoringView.loadAll();
+      }
     });
 
     wsClient.on("CONEXION_ESTABLECIDA", data => {
       this.statusPanel.setActionMessage("Canal WSS sincronizado con telemetría en vivo.", "EN LÍNEA", "bg-info");
+      this.monitoringView.loadAll();
     });
 
     // Escuchar movimientos individuales en tiempo real desde cualquier dispositivo
     wsClient.on("MOVIMIENTO_INDIVIDUAL", data => {
       const origen = data.origen || "REMOTO";
-      this.statusPanel.setActionMessage(`📡 En vivo: ${data.codigo_comando} (ID: ${data.id_comando}) desde ${origen}`, "TELEMETRÍA", "bg-primary");
+      const comando = data.comando || data.codigo_comando;
+      const codigo = data.codigo || data.id_comando;
+      this.statusPanel.setActionMessage(`📡 En vivo: ${comando} (ID: ${codigo}) desde ${origen}`, "TELEMETRÍA", "bg-primary");
+      
+      // Actualizar tarjeta y tabla en la vista de monitoreo
+      this.monitoringView.handleWsMovimiento(data);
     });
 
-    wsClient.on("DEMO_INICIO", data => this.demoController.onDemoStart(data));
-    wsClient.on("DEMO_MOVIMIENTO", data => this.demoController.onDemoStep(data));
-    wsClient.on("DEMO_FIN", () => this.demoController.onDemoEnd());
-    wsClient.on("DEMO_CANCELADA", () => this.demoController.onDemoCancel());
+    // Eventos de DEMO autónoma
+    wsClient.on("DEMO_INICIO", data => {
+      this.demoController.onDemoStart(data);
+    });
+
+    wsClient.on("DEMO_MOVIMIENTO", data => {
+      this.demoController.onDemoStep(data);
+      this.monitoringView.handleWsDemoMovimiento(data);
+    });
+
+    wsClient.on("DEMO_FIN", () => {
+      this.demoController.onDemoEnd();
+      this.monitoringView.handleWsDemoFin();
+    });
+
+    wsClient.on("DEMO_CANCELADA", () => {
+      this.demoController.onDemoCancel();
+      this.monitoringView.handleWsDemoFin();
+    });
 
     // Iniciar conexión WSS
     wsClient.connect();
+  }
+
+  handleViewChange(viewName) {
+    if (viewName === "monitoreo") {
+      // Sincronizar datos frescos desde Amazon RDS al entrar a monitoreo
+      this.monitoringView.loadAll();
+    }
   }
 
   async _loadInitialData() {

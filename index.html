@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="description" content="Panel Web de Control en Tiempo Real para Vehículo IoT">
-  <title>Control IoT · Excavadora</title>
+  <meta name="description" content="Panel Web de Control y Monitoreo en Tiempo Real para Vehículo IoT">
+  <title>Control y Monitoreo IoT · Excavadora</title>
   <link rel="icon" type="image/svg+xml" href="./favicon.svg">
   <!-- Bootstrap 5.3 CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -15,9 +15,9 @@
 </head>
 <body class="d-flex flex-column min-vh-100 bg-dark text-light select-none">
 
-  <!-- ENCABEZADO -->
+  <!-- ENCABEZADO Y NAVEGACIÓN -->
   <header class="navbar navbar-dark bg-black border-bottom border-secondary py-2 px-3 sticky-top">
-    <div class="container-fluid d-flex justify-content-between align-items-center p-0">
+    <div class="container-fluid d-flex justify-content-between align-items-center p-0 flex-wrap gap-2">
       <div class="d-flex align-items-center gap-2">
         <i class="bi bi-cpu-fill text-warning fs-4"></i>
         <div>
@@ -25,13 +25,24 @@
           <small class="text-secondary d-block" id="txt-vehicle-id">Vehículo ID: --</small>
         </div>
       </div>
+
+      <!-- Selector de Vistas: CONTROL / MONITOREO -->
+      <nav class="nav nav-pills bg-dark rounded-pill p-1 border border-secondary" role="tablist" aria-label="Vistas de la aplicación">
+        <button class="nav-link active px-3 py-1 fw-semibold rounded-pill btn-view-tab" data-nav-view="control" role="tab" aria-selected="true" aria-controls="view-control">
+          <i class="bi bi-joystick me-1"></i> Control
+        </button>
+        <button class="nav-link px-3 py-1 fw-semibold rounded-pill btn-view-tab text-light" data-nav-view="monitoreo" role="tab" aria-selected="false" aria-controls="view-monitoreo">
+          <i class="bi bi-speedometer2 me-1"></i> Monitoreo
+        </button>
+      </nav>
+
       <button class="btn btn-sm btn-outline-secondary" id="btn-refresh-status" title="Recomprobar servicios">
         <i class="bi bi-arrow-clockwise"></i>
       </button>
     </div>
   </header>
 
-  <!-- PANEL DE TRES ESTADOS DE CONECTIVIDAD -->
+  <!-- PANEL DE TRES ESTADOS DE CONECTIVIDAD (SIEMPRE VISIBLE) -->
   <section class="bg-body-tertiary border-bottom border-secondary py-2 px-3" aria-label="Indicadores de conectividad">
     <div class="container-fluid p-0">
       <div class="row g-2 text-center status-badges">
@@ -68,91 +79,182 @@
     </div>
   </section>
 
-  <!-- ÁREA DE CONTROL PRINCIPAL (MOBILE FIRST) -->
+  <!-- ÁREA PRINCIPAL -->
   <main class="container-fluid flex-grow-1 py-3 px-3">
-    <div class="row g-3 h-100 align-items-center">
-      
-      <!-- COLUMNA IZQUIERDA: JOYSTICK Y PARADA DE EMERGENCIA -->
-      <div class="col-12 col-lg-6 d-flex flex-column align-items-center justify-content-center">
-        <div class="control-card w-100 p-3 rounded-4 border border-secondary text-center shadow-lg">
-          <h2 class="h6 text-uppercase tracking-wider text-secondary mb-3">Control Direccional</h2>
+
+    <!-- ========================================== -->
+    <!-- VISTA 1: CONTROL (MOBILE FIRST)            -->
+    <!-- ========================================== -->
+    <div id="view-control" class="view-panel" role="tabpanel" aria-labelledby="tab-control">
+      <div class="row g-3 h-100 align-items-center">
+        
+        <!-- COLUMNA IZQUIERDA: JOYSTICK Y PARADA DE EMERGENCIA -->
+        <div class="col-12 col-lg-6 d-flex flex-column align-items-center justify-content-center">
+          <div class="control-card w-100 p-3 rounded-4 border border-secondary text-center shadow-lg">
+            <h2 class="h6 text-uppercase tracking-wider text-secondary mb-3">Control Direccional</h2>
+            
+            <!-- Contenedor del Joystick Táctil -->
+            <div id="joystick-zone" class="joystick-container mx-auto my-2 touch-action-none" role="application" aria-label="Joystick para control de dirección">
+              <div id="joystick-base" class="joystick-base">
+                <div id="joystick-knob" class="joystick-knob">
+                  <i class="bi bi-arrows-move"></i>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-2 text-secondary small font-monospace" id="lbl-joystick-dir">ESTADO: NEUTRAL</div>
+
+            <!-- BOTÓN DETENER (PRIORIDAD MÁXIMA) -->
+            <button id="btn-stop-emergency" class="btn btn-danger btn-lg w-100 py-3 mt-3 fw-bolder text-uppercase tracking-widest shadow" type="button">
+              <i class="bi bi-stop-circle-fill me-2 fs-4 align-middle"></i> DETENER
+            </button>
+          </div>
+        </div>
+
+        <!-- COLUMNA DERECHA: ACTUADORES Y CONTROL DE DEMO -->
+        <div class="col-12 col-lg-6 d-flex flex-column gap-3">
           
-          <!-- Contenedor del Joystick Táctil -->
-          <div id="joystick-zone" class="joystick-container mx-auto my-2 touch-action-none" role="application" aria-label="Joystick para control de dirección">
-            <div id="joystick-base" class="joystick-base">
-              <div id="joystick-knob" class="joystick-knob">
-                <i class="bi bi-arrows-move"></i>
+          <!-- ACTUADORES DE BRAZO Y PALA -->
+          <div class="control-card p-3 rounded-4 border border-secondary shadow-lg">
+            <h2 class="h6 text-uppercase tracking-wider text-secondary mb-3">Actuadores (Brazo y Pala)</h2>
+            <div class="row g-2">
+              <div class="col-6">
+                <button class="btn btn-outline-info w-100 py-3 fw-bold btn-actuator" data-comando="SUBIR_BRAZO" type="button">
+                  <i class="bi bi-arrow-up-square-fill d-block fs-3 mb-1"></i> Subir Brazo
+                </button>
+              </div>
+              <div class="col-6">
+                <button class="btn btn-outline-info w-100 py-3 fw-bold btn-actuator" data-comando="BAJAR_BRAZO" type="button">
+                  <i class="bi bi-arrow-down-square-fill d-block fs-3 mb-1"></i> Bajar Brazo
+                </button>
+              </div>
+              <div class="col-6">
+                <button class="btn btn-outline-warning w-100 py-3 fw-bold btn-actuator" data-comando="ABRIR_PALA" type="button">
+                  <i class="bi bi-arrows-expand d-block fs-3 mb-1"></i> Abrir Pala
+                </button>
+              </div>
+              <div class="col-6">
+                <button class="btn btn-outline-warning w-100 py-3 fw-bold btn-actuator" data-comando="CERRAR_PALA" type="button">
+                  <i class="bi bi-arrows-collapse d-block fs-3 mb-1"></i> Cerrar Pala
+                </button>
               </div>
             </div>
           </div>
 
-          <div class="mt-2 text-secondary small font-monospace" id="lbl-joystick-dir">ESTADO: NEUTRAL</div>
+          <!-- CONTROL DE DEMO -->
+          <div class="control-card p-3 rounded-4 border border-secondary shadow-lg">
+            <h2 class="h6 text-uppercase tracking-wider text-secondary mb-3">Rutinas DEMO Autónomas</h2>
+            <div class="input-group mb-2">
+              <label class="input-group-text bg-dark border-secondary text-secondary" for="select-demos"><i class="bi bi-list-check"></i></label>
+              <select class="form-select bg-dark text-light border-secondary" id="select-demos" aria-label="Seleccionar rutina DEMO">
+                <option value="" selected disabled>Cargando rutinas...</option>
+              </select>
+            </div>
+            <div class="d-flex gap-2">
+              <button id="btn-start-demo" class="btn btn-success flex-grow-1 fw-bold py-2" type="button" disabled>
+                <i class="bi bi-play-circle-fill me-1"></i> Iniciar DEMO
+              </button>
+              <button id="btn-cancel-demo" class="btn btn-outline-danger fw-bold py-2" type="button" disabled>
+                <i class="bi bi-x-circle-fill me-1"></i> Cancelar
+              </button>
+            </div>
+            <!-- Progreso de DEMO vía WSS -->
+            <div id="demo-progress-box" class="mt-2 p-2 rounded bg-black border border-secondary small d-none">
+              <span class="text-info fw-semibold" id="lbl-demo-status">DEMO en progreso...</span>
+              <div class="progress mt-1" style="height: 6px;">
+                <div id="bar-demo-progress" class="progress-bar progress-bar-striped progress-bar-animated bg-info" style="width: 0%"></div>
+              </div>
+            </div>
+          </div>
 
-          <!-- BOTÓN DETENER (PRIORIDAD MÁXIMA) -->
-          <button id="btn-stop-emergency" class="btn btn-danger btn-lg w-100 py-3 mt-3 fw-bolder text-uppercase tracking-widest shadow" type="button">
-            <i class="bi bi-stop-circle-fill me-2 fs-4 align-middle"></i> DETENER
-          </button>
         </div>
       </div>
+    </div>
 
-      <!-- COLUMNA DERECHA: ACTUADORES Y CONTROL DE DEMO -->
-      <div class="col-12 col-lg-6 d-flex flex-column gap-3">
+    <!-- ========================================== -->
+    <!-- VISTA 2: MONITOREO EN TIEMPO REAL          -->
+    <!-- ========================================== -->
+    <div id="view-monitoreo" class="view-panel d-none" role="tabpanel" aria-labelledby="tab-monitoreo" aria-hidden="true">
+      <div class="row g-3">
         
-        <!-- ACTUADORES DE BRAZO Y PALA -->
-        <div class="control-card p-3 rounded-4 border border-secondary shadow-lg">
-          <h2 class="h6 text-uppercase tracking-wider text-secondary mb-3">Actuadores (Brazo y Pala)</h2>
-          <div class="row g-2">
-            <div class="col-6">
-              <button class="btn btn-outline-info w-100 py-3 fw-bold btn-actuator" data-comando="SUBIR_BRAZO" type="button">
-                <i class="bi bi-arrow-up-square-fill d-block fs-3 mb-1"></i> Subir Brazo
-              </button>
+        <!-- TARJETA DESTACADA: ÚLTIMO MOVIMIENTO / ESTADO -->
+        <div class="col-12 col-lg-5">
+          <div class="control-card p-3 rounded-4 border border-secondary shadow-lg h-100 d-flex flex-column justify-content-between">
+            <div>
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <h2 class="h6 text-uppercase tracking-wider text-secondary mb-0">Último Movimiento / Estado</h2>
+                <span id="mon-last-status" class="badge bg-success">PERSISTIDO EN RDS</span>
+              </div>
+              <hr class="border-secondary my-2">
+
+              <div class="text-center py-4">
+                <small class="text-secondary d-block text-uppercase fw-semibold mb-1">Comando Actual</small>
+                <div id="mon-command-badge" class="display-6 fw-bold mb-2 text-danger">
+                  <span id="mon-last-command">DETENER</span>
+                </div>
+                <span id="mon-last-code" class="badge bg-dark border border-secondary px-3 py-2 font-monospace fs-6 text-warning">
+                  Código: #9
+                </span>
+              </div>
             </div>
-            <div class="col-6">
-              <button class="btn btn-outline-info w-100 py-3 fw-bold btn-actuator" data-comando="BAJAR_BRAZO" type="button">
-                <i class="bi bi-arrow-down-square-fill d-block fs-3 mb-1"></i> Bajar Brazo
-              </button>
-            </div>
-            <div class="col-6">
-              <button class="btn btn-outline-warning w-100 py-3 fw-bold btn-actuator" data-comando="ABRIR_PALA" type="button">
-                <i class="bi bi-arrows-expand d-block fs-3 mb-1"></i> Abrir Pala
-              </button>
-            </div>
-            <div class="col-6">
-              <button class="btn btn-outline-warning w-100 py-3 fw-bold btn-actuator" data-comando="CERRAR_PALA" type="button">
-                <i class="bi bi-arrows-collapse d-block fs-3 mb-1"></i> Cerrar Pala
-              </button>
+
+            <div class="bg-black p-3 rounded-3 border border-secondary small">
+              <div class="d-flex justify-content-between mb-2">
+                <span class="text-secondary"><i class="bi bi-broadcast-pin me-1"></i> Origen:</span>
+                <span id="mon-last-origin" class="font-monospace text-light fw-bold">WEB-CONTROL</span>
+              </div>
+              <div class="d-flex justify-content-between">
+                <span class="text-secondary"><i class="bi bi-clock-history me-1"></i> Fecha y Hora:</span>
+                <span id="mon-last-time" class="font-monospace text-info fw-bold">--/--/---- --:--:--</span>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- CONTROL DE DEMO -->
-        <div class="control-card p-3 rounded-4 border border-secondary shadow-lg">
-          <h2 class="h6 text-uppercase tracking-wider text-secondary mb-3">Rutinas DEMO Autónomas</h2>
-          <div class="input-group mb-2">
-            <label class="input-group-text bg-dark border-secondary text-secondary" for="select-demos"><i class="bi bi-list-check"></i></label>
-            <select class="form-select bg-dark text-light border-secondary" id="select-demos" aria-label="Seleccionar rutina DEMO">
-              <option value="" selected disabled>Cargando rutinas...</option>
-            </select>
-          </div>
-          <div class="d-flex gap-2">
-            <button id="btn-start-demo" class="btn btn-success flex-grow-1 fw-bold py-2" type="button" disabled>
-              <i class="bi bi-play-circle-fill me-1"></i> Iniciar DEMO
-            </button>
-            <button id="btn-cancel-demo" class="btn btn-outline-danger fw-bold py-2" type="button" disabled>
-              <i class="bi bi-x-circle-fill me-1"></i> Cancelar
-            </button>
-          </div>
-          <!-- Progreso de DEMO vía WSS -->
-          <div id="demo-progress-box" class="mt-2 p-2 rounded bg-black border border-secondary small d-none">
-            <span class="text-info fw-semibold" id="lbl-demo-status">DEMO en progreso...</span>
-            <div class="progress mt-1" style="height: 6px;">
-              <div id="bar-demo-progress" class="progress-bar progress-bar-striped progress-bar-animated bg-info" style="width: 0%"></div>
+        <!-- TABLA SEMÁNTICA: DIEZ MOVIMIENTOS INDIVIDUALES PERSISTIDOS -->
+        <div class="col-12 col-lg-7">
+          <div class="control-card p-3 rounded-4 border border-secondary shadow-lg">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <div>
+                <h2 class="h6 text-uppercase tracking-wider text-secondary mb-0">Historial (Últimos 10)</h2>
+                <small class="text-secondary" style="font-size: 0.75rem;">Persistencia en Amazon RDS for MySQL (sp_obtener_historial)</small>
+              </div>
+              <button class="btn btn-sm btn-outline-info" id="btn-refresh-history" title="Sincronizar con base de datos">
+                <i class="bi bi-arrow-repeat me-1"></i> Sincronizar
+              </button>
             </div>
+
+            <!-- Contenedor con table-responsive para evitar desbordes móviles -->
+            <div class="table-responsive">
+              <table class="table table-dark table-hover table-sm align-middle mb-0" id="mon-history-table">
+                <thead class="table-dark border-bottom border-secondary text-secondary small text-uppercase font-monospace">
+                  <tr>
+                    <th scope="col" class="text-center" style="width: 45px;">#</th>
+                    <th scope="col">Movimiento / Código</th>
+                    <th scope="col">Fecha y Hora</th>
+                    <th scope="col">Origen</th>
+                  </tr>
+                </thead>
+                <tbody id="mon-history-tbody">
+                  <!-- Filas renderizadas por MonitoringView -->
+                </tbody>
+              </table>
+
+              <!-- Estado de la tabla (Cargando / Sin registros / Error) -->
+              <div id="mon-table-state-box" class="text-center py-4 text-secondary">
+                <span id="mon-table-state-text">
+                  <div class="spinner-border spinner-border-sm text-info me-2" role="status"></div>
+                  Cargando historial desde Amazon RDS...
+                </span>
+              </div>
+            </div>
+
           </div>
         </div>
 
       </div>
     </div>
+
   </main>
 
   <!-- PIE DE PÁGINA (CRÉDITOS VISIBLES) -->

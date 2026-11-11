@@ -1,0 +1,124 @@
+:root {
+  --color-primary: #0284c7;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-success: #10b981;
+  --color-dark-bg: #090d16;
+  --color-card-bg: #111827;
+}
+
+body {
+  background-color: var(--color-dark-bg) !important;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.tracking-wider { letter-spacing: 0.1em; }
+.tracking-wide { letter-spacing: 0.05em; }
+
+.control-card {
+  background-color: var(--color-card-bg);
+}
+
+/* Indicadores de Estado */
+.status-card {
+  background-color: rgba(0, 0, 0, 0.4);
+  font-size: 0.8rem;
+  min-height: 52px;
+}
+
+.status-indicator {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-bottom: 2px;
+}
+
+.status-text {
+  font-size: 0.72rem;
+}
+
+/* JOYSTICK TÁCTIL */
+.touch-action-none {
+  touch-action: none;
+}
+
+.joystick-container {
+  width: 240px;
+  height: 240px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.joystick-base {
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #1f2937 0%, #111827 70%, #030712 100%);
+  border: 3px solid #374151;
+  position: relative;
+  box-shadow: inset 0 4px 12px rgba(0,0,0,0.8), 0 4px 15px rgba(0,0,0,0.5);
+}
+
+.joystick-knob {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #38bdf8 0%, #0284c7 70%, #0369a1 100%);
+  border: 3px solid #e0f2fe;
+  position: absolute;
+  top: calc(50% - 40px);
+  left: calc(50% - 40px);
+  cursor: grab;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-size: 1.5rem;
+  box-shadow: 0 4px 10px rgba(2, 132, 199, 0.5);
+  transition: transform 0.05s ease-out;
+}
+
+.joystick-knob:active {
+  cursor: grabbing;
+  background: radial-gradient(circle, #67e8f9 0%, #06b6d4 70%, #0891b2 100%);
+}
+
+/* Botón Detener */
+#btn-stop-emergency {
+  transition: transform 0.1s ease, filter 0.1s ease;
+}
+
+#btn-stop-emergency:active {
+  transform: scale(0.97);
+  filter: brightness(1.2);
+}
+
+/* Botones de actuadores */
+.btn-actuator {
+  transition: all 0.15s ease;
+}
+.btn-actuator:active {
+  transform: scale(0.96);
+}
+
+/* Ajustes Responsive */
+@media (max-width: 576px) {
+  .joystick-container {
+    width: 200px;
+    height: 200px;
+  }
+  .joystick-base {
+    width: 190px;
+    height: 190px;
+  }
+  .joystick-knob {
+    width: 70px;
+    height: 70px;
+    top: calc(50% - 35px);
+    left: calc(50% - 35px);
+  }
+}

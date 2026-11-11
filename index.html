@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="es" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="Panel Web de Control en Tiempo Real para Vehículo IoT">
+  <title>Control IoT · Excavadora</title>
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+  <!-- Bootstrap 5.3 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <!-- Estilos Personalizados -->
+  <link rel="stylesheet" href="./css/styles.css">
+</head>
+<body class="d-flex flex-column min-vh-100 bg-dark text-light select-none">
+
+  <!-- ENCABEZADO -->
+  <header class="navbar navbar-dark bg-black border-bottom border-secondary py-2 px-3 sticky-top">
+    <div class="container-fluid d-flex justify-content-between align-items-center p-0">
+      <div class="d-flex align-items-center gap-2">
+        <i class="bi bi-cpu-fill text-warning fs-4"></i>
+        <div>
+          <h1 class="h6 mb-0 fw-bold tracking-wide">EXCAVADORA IoT</h1>
+          <small class="text-secondary d-block" id="txt-vehicle-id">Vehículo ID: --</small>
+        </div>
+      </div>
+      <button class="btn btn-sm btn-outline-secondary" id="btn-refresh-status" title="Recomprobar servicios">
+        <i class="bi bi-arrow-clockwise"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- PANEL DE TRES ESTADOS DE CONECTIVIDAD -->
+  <section class="bg-body-tertiary border-bottom border-secondary py-2 px-3" aria-label="Indicadores de conectividad">
+    <div class="container-fluid p-0">
+      <div class="row g-2 text-center status-badges">
+        <!-- 1. WebSocket WSS -->
+        <div class="col-4">
+          <div class="status-card p-1 rounded border border-secondary" id="card-status-ws">
+            <span class="status-indicator bg-secondary" id="dot-ws"></span>
+            <small class="d-block text-secondary fw-semibold">Canal WSS</small>
+            <span class="status-text fw-bold text-truncate d-block" id="lbl-status-ws">Comprobando</span>
+          </div>
+        </div>
+        <!-- 2. Servidor AWS 21 APIs -->
+        <div class="col-4">
+          <div class="status-card p-1 rounded border border-secondary" id="card-status-api">
+            <span class="status-indicator bg-secondary" id="dot-api"></span>
+            <small class="d-block text-secondary fw-semibold">Servidor AWS</small>
+            <span class="status-text fw-bold text-truncate d-block" id="lbl-status-api">Comprobando</span>
+          </div>
+        </div>
+        <!-- 3. Amazon RDS MySQL -->
+        <div class="col-4">
+          <div class="status-card p-1 rounded border border-secondary" id="card-status-rds">
+            <span class="status-indicator bg-secondary" id="dot-rds"></span>
+            <small class="d-block text-secondary fw-semibold">Base RDS</small>
+            <span class="status-text fw-bold text-truncate d-block" id="lbl-status-rds">Sin verificar</span>
+          </div>
+        </div>
+      </div>
+      <!-- Barra de retroalimentación de acción -->
+      <div class="alert alert-secondary py-1 px-2 mt-2 mb-0 d-flex justify-content-between align-items-center" role="status" id="action-banner">
+        <span class="text-truncate small" id="lbl-last-action"><i class="bi bi-info-circle me-1"></i> Sistema listo.</span>
+        <span class="badge bg-secondary font-monospace" id="lbl-action-status">ESPERA</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ÁREA DE CONTROL PRINCIPAL (MOBILE FIRST) -->
+  <main class="container-fluid flex-grow-1 py-3 px-3">
+    <div class="row g-3 h-100 align-items-center">
+      
+      <!-- COLUMNA IZQUIERDA: JOYSTICK Y PARADA DE EMERGENCIA -->
+      <div class="col-12 col-lg-6 d-flex flex-column align-items-center justify-content-center">
+        <div class="control-card w-100 p-3 rounded-4 border border-secondary text-center shadow-lg">
+          <h2 class="h6 text-uppercase tracking-wider text-secondary mb-3">Control Direccional</h2>
+          
+          <!-- Contenedor del Joystick Táctil -->
+          <div id="joystick-zone" class="joystick-container mx-auto my-2 touch-action-none" role="application" aria-label="Joystick para control de dirección">
+            <div id="joystick-base" class="joystick-base">
+              <div id="joystick-knob" class="joystick-knob">
+                <i class="bi bi-arrows-move"></i>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-2 text-secondary small font-monospace" id="lbl-joystick-dir">ESTADO: NEUTRAL</div>
+
+          <!-- BOTÓN DETENER (PRIORIDAD MÁXIMA) -->
+          <button id="btn-stop-emergency" class="btn btn-danger btn-lg w-100 py-3 mt-3 fw-bolder text-uppercase tracking-widest shadow" type="button">
+            <i class="bi bi-stop-circle-fill me-2 fs-4 align-middle"></i> DETENER
+          </button>
+        </div>
+      </div>
+
+      <!-- COLUMNA DERECHA: ACTUADORES Y CONTROL DE DEMO -->
+      <div class="col-12 col-lg-6 d-flex flex-column gap-3">
+        
+        <!-- ACTUADORES DE BRAZO Y PALA -->
+        <div class="control-card p-3 rounded-4 border border-secondary shadow-lg">
+          <h2 class="h6 text-uppercase tracking-wider text-secondary mb-3">Actuadores (Brazo y Pala)</h2>
+          <div class="row g-2">
+            <div class="col-6">
+              <button class="btn btn-outline-info w-100 py-3 fw-bold btn-actuator" data-comando="SUBIR_BRAZO" type="button">
+                <i class="bi bi-arrow-up-square-fill d-block fs-3 mb-1"></i> Subir Brazo
+              </button>
+            </div>
+            <div class="col-6">
+              <button class="btn btn-outline-info w-100 py-3 fw-bold btn-actuator" data-comando="BAJAR_BRAZO" type="button">
+                <i class="bi bi-arrow-down-square-fill d-block fs-3 mb-1"></i> Bajar Brazo
+              </button>
+            </div>
+            <div class="col-6">
+              <button class="btn btn-outline-warning w-100 py-3 fw-bold btn-actuator" data-comando="ABRIR_PALA" type="button">
+                <i class="bi bi-arrows-expand d-block fs-3 mb-1"></i> Abrir Pala
+              </button>
+            </div>
+            <div class="col-6">
+              <button class="btn btn-outline-warning w-100 py-3 fw-bold btn-actuator" data-comando="CERRAR_PALA" type="button">
+                <i class="bi bi-arrows-collapse d-block fs-3 mb-1"></i> Cerrar Pala
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- CONTROL DE DEMO -->
+        <div class="control-card p-3 rounded-4 border border-secondary shadow-lg">
+          <h2 class="h6 text-uppercase tracking-wider text-secondary mb-3">Rutinas DEMO Autónomas</h2>
+          <div class="input-group mb-2">
+            <label class="input-group-text bg-dark border-secondary text-secondary" for="select-demos"><i class="bi bi-list-check"></i></label>
+            <select class="form-select bg-dark text-light border-secondary" id="select-demos" aria-label="Seleccionar rutina DEMO">
+              <option value="" selected disabled>Cargando rutinas...</option>
+            </select>
+          </div>
+          <div class="d-flex gap-2">
+            <button id="btn-start-demo" class="btn btn-success flex-grow-1 fw-bold py-2" type="button" disabled>
+              <i class="bi bi-play-circle-fill me-1"></i> Iniciar DEMO
+            </button>
+            <button id="btn-cancel-demo" class="btn btn-outline-danger fw-bold py-2" type="button" disabled>
+              <i class="bi bi-x-circle-fill me-1"></i> Cancelar
+            </button>
+          </div>
+          <!-- Progreso de DEMO vía WSS -->
+          <div id="demo-progress-box" class="mt-2 p-2 rounded bg-black border border-secondary small d-none">
+            <span class="text-info fw-semibold" id="lbl-demo-status">DEMO en progreso...</span>
+            <div class="progress mt-1" style="height: 6px;">
+              <div id="bar-demo-progress" class="progress-bar progress-bar-striped progress-bar-animated bg-info" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- PIE DE PÁGINA (CRÉDITOS VISIBLES) -->
+  <footer class="bg-black text-secondary py-3 px-3 border-top border-secondary text-center">
+    <div class="container-fluid p-0">
+      <p class="small mb-0 fw-semibold text-light">
+        Desarrollado por Emanuel González Mayorga · 2026
+      </p>
+      <small class="d-block text-secondary mt-1 font-monospace" style="font-size: 0.75rem;">
+        Integración AWS EC2 · RDS MySQL · FastAPI · WSS · GitHub Pages
+      </small>
+    </div>
+  </footer>
+
+  <!-- Scripts Modulares ES6+ -->
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>

@@ -69,6 +69,12 @@ class App {
       this.statusPanel.setActionMessage("Canal WSS sincronizado con telemetría en vivo.", "EN LÍNEA", "bg-info");
     });
 
+    // Escuchar movimientos individuales en tiempo real desde cualquier dispositivo
+    wsClient.on("MOVIMIENTO_INDIVIDUAL", data => {
+      const origen = data.origen || "REMOTO";
+      this.statusPanel.setActionMessage(`📡 En vivo: ${data.codigo_comando} (ID: ${data.id_comando}) desde ${origen}`, "TELEMETRÍA", "bg-primary");
+    });
+
     wsClient.on("DEMO_INICIO", data => this.demoController.onDemoStart(data));
     wsClient.on("DEMO_MOVIMIENTO", data => this.demoController.onDemoStep(data));
     wsClient.on("DEMO_FIN", () => this.demoController.onDemoEnd());

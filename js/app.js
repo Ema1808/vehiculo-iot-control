@@ -3,7 +3,6 @@ import { vehicleService } from "./api/vehicleService.js";
 import { wsClient } from "./ws/wsClient.js";
 import { StatusPanel } from "./components/statusPanel.js";
 import { VirtualJoystick } from "./components/joystick.js";
-import { ActionButtons } from "./components/actionButtons.js";
 import { DemoController } from "./components/demoController.js";
 import { Navigation } from "./components/navigation.js";
 import { MonitoringView } from "./components/monitoringView.js";
@@ -27,29 +26,54 @@ class App {
     ]);
     this.isSending = false;
 
-    // 1. Componentes de la vista de Control (Práctica 4.1)
+    // 1. Control de Rutinas DEMO
     this.demoController = new DemoController(
       this.handleStartDemo.bind(this),
       this.handleCancelDemo.bind(this)
     );
-    this.actionButtons = new ActionButtons(this.handleCommandName.bind(this));
-    this.joystick = new VirtualJoystick("joystick-base", "joystick-knob", this.handleJoystickDirection.bind(this));
 
-    // 2. Componente de la vista de Monitoreo (Práctica 4.2)
+    // 2. Cabina Dual Joystick Táctil (Izquierdo: Dirección | Derecho: Brazo y Pala)
+    this.joystickDrive = new VirtualJoystick(
+      "joystick-base",
+      "joystick-knob",
+      "lbl-joystick-dir",
+      {
+        up: "AVANZAR",
+        down: "RETROCEDER",
+        left: "GIRAR_IZQUIERDA",
+        right: "GIRAR_DERECHA"
+      },
+      this.handleJoystickDirection.bind(this)
+    );
+
+    this.joystickActuators = new VirtualJoystick(
+      "joystick-act-base",
+      "joystick-act-knob",
+      "lbl-joystick-act-dir",
+      {
+        up: "SUBIR_BRAZO",
+        down: "BAJAR_BRAZO",
+        left: "ABRIR_PALA",
+        right: "CERRAR_PALA"
+      },
+      this.handleJoystickDirection.bind(this)
+    );
+
+    // 3. Vista de Monitoreo
     this.monitoringView = new MonitoringView();
 
-    // 3. Componente de la vista de Administración y RBAC (Práctica 4.3)
+    // 4. Vista de Administración y RBAC
     this.adminView = new AdminView(
       this.handleAuthChange.bind(this),
       this.handleSelectVehicle.bind(this)
     );
 
-    // 4. Gestor de Navegación entre las 3 Vistas
+    // 5. Gestor de Navegación entre las 3 Vistas
     this.navigation = new Navigation(this.handleViewChange.bind(this));
   }
 
   async init() {
-    console.log("Iniciando aplicación integral IoT: Control, Monitoreo y Administración...");
+    console.log("Iniciando cabina IoT con Dual Joystick: Control, Monitoreo y Administración...");
     this._updateVehicleHeader();
     this.updateAuthUI();
 
@@ -64,7 +88,7 @@ class App {
   _updateVehicleHeader() {
     const lbl = document.getElementById("txt-vehicle-id");
     if (lbl) {
-      lbl.textContent = `${CONFIG.VEHICLE_NAME} · ID: ${CONFIG.VEHICLE_ID}`;
+      lbl.textContent = `ID: ${CONFIG.VEHICLE_ID}`;
     }
   }
 
@@ -88,7 +112,6 @@ class App {
   }
 
   _bindAuthEvents() {
-    // 1. Envío del formulario de Login
     const formLogin = document.getElementById("form-login");
     const errBox = document.getElementById("login-error-msg");
     const btnSubmit = document.getElementById("btn-login-submit");
@@ -112,7 +135,7 @@ class App {
           this.adminView.load();
           wsClient.reconnectWithAuth();
 
-          this.statusPanel.setActionMessage(`Sesión iniciada: ${res.user.nombre_completo} (${res.user.rol})`, "AUTH OK", "bg-success");
+          this.statusPanel.setActionMessage(`Sesión iniciada: ${res.user.nombre_completo}`, "AUTH OK", "bg-success");
         } catch (err) {
           if (errBox) {
             errBox.textContent = `Error: ${err.message}`;
@@ -127,7 +150,7 @@ class App {
       });
     }
 
-    // 2. Botones de acceso rápido para demostración
+    // Botones de acceso rápido para demostración
     document.querySelectorAll(".btn-quick-role").forEach(btn => {
       btn.addEventListener("click", (e) => {
         e.preventDefault();
@@ -143,7 +166,7 @@ class App {
       });
     });
 
-    // 3. Botón de cierre de sesión
+    // Botón de cierre de sesión
     const btnLogout = document.getElementById("btn-logout");
     if (btnLogout) {
       btnLogout.addEventListener("click", async () => {
@@ -153,7 +176,7 @@ class App {
         this.adminView.load();
         wsClient.reconnectWithAuth();
 
-        this.statusPanel.setActionMessage("Sesión cerrada. Acceso público restringido.", "LOGOUT", "bg-secondary");
+        this.statusPanel.setActionMessage("Sesión cerrada. Acceso público.", "LOGOUT", "bg-secondary");
       });
     }
   }
@@ -174,9 +197,10 @@ class App {
     const profileBox = document.getElementById("auth-profile-container");
 
     if (user) {
-      if (lblUserName) lblUserName.textContent = `${user.nombre_completo.split(" ")[0]} (${user.rol.substring(0, 3)})`;
+      const primerNombre = user.nombre_completo.split(" ")[0];
+      if (lblUserName) lblUserName.textContent = primerNombre;
       if (btnAuth) {
-        btnAuth.className = "btn btn-sm btn-outline-success d-flex align-items-center gap-1 rounded-pill px-3";
+        btnAuth.className = "btn btn-sm btn-outline-success d-flex align-items-center gap-1 rounded-pill px-2 py-1";
       }
       if (formBox) formBox.classList.add("d-none");
       if (profileBox) {
@@ -186,13 +210,13 @@ class App {
         const badgeRole = document.getElementById("profile-role");
         if (badgeRole) {
           badgeRole.textContent = `ROL: ${user.rol}`;
-          badgeRole.className = `badge px-3 py-2 text-uppercase mb-3 ${user.rol === "ADMINISTRADOR" ? "bg-danger" : user.rol === "USUARIO" ? "bg-primary" : "bg-warning text-dark"}`;
+          badgeRole.className = `badge px-3 py-1 text-uppercase mb-3 ${user.rol === "ADMINISTRADOR" ? "bg-danger" : user.rol === "USUARIO" ? "bg-primary" : "bg-warning text-dark"}`;
         }
       }
     } else {
-      if (lblUserName) lblUserName.textContent = "Iniciar Sesión";
+      if (lblUserName) lblUserName.textContent = "Acceso";
       if (btnAuth) {
-        btnAuth.className = "btn btn-sm btn-outline-info d-flex align-items-center gap-1 rounded-pill px-3";
+        btnAuth.className = "btn btn-sm btn-outline-info d-flex align-items-center gap-1 rounded-pill px-2 py-1";
       }
       if (formBox) formBox.classList.remove("d-none");
       if (profileBox) profileBox.classList.add("d-none");
@@ -209,17 +233,13 @@ class App {
     CONFIG.VEHICLE_NAME = vehicleName || `Vehículo #${idVehiculo}`;
     this._updateVehicleHeader();
 
-    // Actualizar conexión WebSocket al canal del nuevo vehículo
     const newWsUrl = `wss://vehiculo-iot-excavadora.duckdns.org/ws/vehiculos/${idVehiculo}`;
     wsClient.setUrl(newWsUrl);
 
-    // Sincronizar catálogo y vistas
     this._loadInitialData();
     this.monitoringView.loadAll();
 
-    this.statusPanel.setActionMessage(`Operando ahora: ${CONFIG.VEHICLE_NAME}`, "VEHÍCULO", "bg-primary");
-
-    // Cambiar automáticamente a la vista de Control para operar el vehículo seleccionado
+    this.statusPanel.setActionMessage(`Operando: ${CONFIG.VEHICLE_NAME}`, "VEHÍCULO", "bg-primary");
     this.navigation.switchView("control");
   }
 
@@ -232,22 +252,18 @@ class App {
     });
 
     wsClient.on("CONEXION_ESTABLECIDA", data => {
-      this.statusPanel.setActionMessage("Canal WSS sincronizado con telemetría en vivo.", "EN LÍNEA", "bg-info");
+      this.statusPanel.setActionMessage("Canal WSS sincronizado con telemetría.", "EN LÍNEA", "bg-info");
       this.monitoringView.loadAll();
     });
 
-    // Escuchar movimientos individuales en tiempo real desde cualquier dispositivo
     wsClient.on("MOVIMIENTO_INDIVIDUAL", data => {
       const origen = data.origen || "REMOTO";
       const comando = data.comando || data.codigo_comando;
       const codigo = data.codigo || data.id_comando;
-      this.statusPanel.setActionMessage(`📡 En vivo: ${comando} (ID: ${codigo}) desde ${origen}`, "TELEMETRÍA", "bg-primary");
-      
-      // Actualizar tarjeta y tabla en la vista de monitoreo
+      this.statusPanel.setActionMessage(`📡 En vivo: ${comando} (#${codigo})`, "TELEMETRÍA", "bg-primary");
       this.monitoringView.handleWsMovimiento(data);
     });
 
-    // Eventos de DEMO autónoma
     wsClient.on("DEMO_INICIO", data => {
       this.demoController.onDemoStart(data);
     });
@@ -267,7 +283,6 @@ class App {
       this.monitoringView.handleWsDemoFin();
     });
 
-    // Iniciar conexión WSS
     wsClient.connect();
   }
 
@@ -281,24 +296,23 @@ class App {
 
   async _loadInitialData() {
     try {
-      this.statusPanel.setActionMessage("Cargando catálogo de comandos desde AWS...", "CARGANDO", "bg-warning");
+      this.statusPanel.setActionMessage("Sincronizando comandos...", "CARGANDO", "bg-warning");
       const comandos = await vehicleService.getComandos(CONFIG.VEHICLE_ID);
       comandos.forEach(c => this.catalogMap.set(c.nombre, c.id_comando));
 
       const demos = await vehicleService.getDemos(CONFIG.VEHICLE_ID);
       this.demoController.populateDemos(demos);
 
-      this.statusPanel.setActionMessage("Catálogo sincronizado. Listo para operar.", "LISTO", "bg-success");
+      this.statusPanel.setActionMessage("Listo para operar.", "LISTO", "bg-success");
       await this._runDiagnostics();
     } catch (e) {
-      this.statusPanel.setActionMessage(`Falla al cargar catálogo: ${e.message}`, "ERROR", "bg-danger");
+      this.statusPanel.setActionMessage(`Falla de catálogo: ${e.message}`, "ERROR", "bg-danger");
       this.statusPanel.setApiStatus("OFFLINE");
       this.statusPanel.setRdsStatus("OFFLINE");
     }
   }
 
   async _runDiagnostics() {
-    // 1. Diagnóstico de la API en EC2
     try {
       await vehicleService.checkApiHealth();
       this.statusPanel.setApiStatus("ONLINE");
@@ -306,7 +320,6 @@ class App {
       this.statusPanel.setApiStatus("OFFLINE");
     }
 
-    // 2. Diagnóstico de la Base de Datos RDS
     try {
       await vehicleService.checkRdsConnection(CONFIG.VEHICLE_ID);
       this.statusPanel.setRdsStatus("ONLINE");
@@ -340,9 +353,9 @@ class App {
     try {
       this.statusPanel.setActionMessage(`Transmitiendo: ${commandName}...`, "ENVIANDO", "bg-warning");
       const res = await vehicleService.enviarMovimiento(idComando, "WEB-CONTROL", CONFIG.VEHICLE_ID);
-      this.statusPanel.setActionMessage(`Ejecutado: ${commandName} (ID: ${idComando})`, "OK", "bg-success");
+      this.statusPanel.setActionMessage(`Ejecutado: ${commandName} (#${idComando})`, "OK", "bg-success");
     } catch (e) {
-      this.statusPanel.setActionMessage(`Error al emitir ${commandName}: ${e.message}`, "FALLO", "bg-danger");
+      this.statusPanel.setActionMessage(`Fallo: ${e.message}`, "FALLO", "bg-danger");
     } finally {
       this.isSending = false;
     }
@@ -353,17 +366,17 @@ class App {
       this.statusPanel.setActionMessage(`Iniciando DEMO #${idDemo}...`, "INICIANDO", "bg-info");
       await vehicleService.iniciarDemo(idDemo, CONFIG.VEHICLE_ID);
     } catch (e) {
-      this.statusPanel.setActionMessage(`Error al iniciar DEMO: ${e.message}`, "ERROR", "bg-danger");
+      this.statusPanel.setActionMessage(`Error DEMO: ${e.message}`, "ERROR", "bg-danger");
     }
   }
 
   async handleCancelDemo() {
     try {
-      this.statusPanel.setActionMessage("Cancelando DEMO en curso...", "CANCELANDO", "bg-warning");
+      this.statusPanel.setActionMessage("Cancelando DEMO...", "CANCELANDO", "bg-warning");
       await vehicleService.cancelarDemo(CONFIG.VEHICLE_ID);
       this.handleCommandName("DETENER");
     } catch (e) {
-      this.statusPanel.setActionMessage(`Error al cancelar DEMO: ${e.message}`, "ERROR", "bg-danger");
+      this.statusPanel.setActionMessage(`Error al cancelar: ${e.message}`, "ERROR", "bg-danger");
     }
   }
 }

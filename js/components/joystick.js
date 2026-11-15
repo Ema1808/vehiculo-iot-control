@@ -1,19 +1,27 @@
+/**
+ * VirtualJoystick táctil y responsivo con soporte para multi-touch independiente.
+ * Soporta cualquier diámetro de base, cálculo dinámico de zona muerta y mapeo de comandos.
+ */
 export class VirtualJoystick {
-  constructor(baseId, knobId, onDirectionChange) {
+  constructor(baseId, knobId, labelId, directionMap, onDirectionChange) {
     this.base = document.getElementById(baseId);
     this.knob = document.getElementById(knobId);
+    this.label = document.getElementById(labelId);
+    this.directionMap = directionMap || {
+      up: "AVANZAR",
+      down: "RETROCEDER",
+      left: "GIRAR_IZQUIERDA",
+      right: "GIRAR_DERECHA"
+    };
     this.onDirectionChange = onDirectionChange;
 
     this.active = false;
     this.currentDirection = "NEUTRAL";
     this.pointerId = null;
 
-    this.baseRadius = 110;
-    this.knobRadius = 40;
-    this.maxDistance = this.baseRadius - this.knobRadius;
-    this.deadZone = 25; // 25px de zona muerta para evitar falsos toques
-
-    this._bindEvents();
+    if (this.base && this.knob) {
+      this._bindEvents();
+    }
   }
 
   _bindEvents() {
@@ -24,9 +32,12 @@ export class VirtualJoystick {
   }
 
   _onStart(e) {
+    if (this.active) return;
     this.active = true;
     this.pointerId = e.pointerId;
-    this.base.setPointerCapture(e.pointerId);
+    try {
+      this.base.setPointerCapture(e.pointerId);
+    } catch (_) {}
     this._processCoord(e.clientX, e.clientY);
   }
 
@@ -48,20 +59,25 @@ export class VirtualJoystick {
     const centerX = rect.left + rect.width / 2;
     const centerY = rect.top + rect.height / 2;
 
+    const baseRadius = rect.width / 2;
+    const knobRadius = (this.knob.offsetWidth || 44) / 2;
+    const maxDistance = Math.max(10, baseRadius - knobRadius);
+    const deadZone = baseRadius * 0.22;
+
     const dx = clientX - centerX;
     const dy = clientY - centerY;
     const distance = Math.hypot(dx, dy);
 
-    // Calcular desplazamiento visual acotado
+    // Desplazamiento visual acotado al perímetro
     const angle = Math.atan2(dy, dx);
-    const clampedDist = Math.min(distance, this.maxDistance);
+    const clampedDist = Math.min(distance, maxDistance);
     const knobX = clampedDist * Math.cos(angle);
     const knobY = clampedDist * Math.sin(angle);
 
     this.knob.style.transform = `translate(${knobX}px, ${knobY}px)`;
 
-    // Detección de dirección
-    if (distance < this.deadZone) {
+    // Zona muerta para evitar envíos involuntarios
+    if (distance < deadZone) {
       this._setDirection("NEUTRAL");
       return;
     }
@@ -69,21 +85,22 @@ export class VirtualJoystick {
     const deg = (angle * 180 / Math.PI + 360) % 360;
 
     if (deg >= 45 && deg < 135) {
-      this._setDirection("RETROCEDER");
+      this._setDirection(this.directionMap.down);
     } else if (deg >= 135 && deg < 225) {
-      this._setDirection("GIRAR_IZQUIERDA");
+      this._setDirection(this.directionMap.left);
     } else if (deg >= 225 && deg < 315) {
-      this._setDirection("AVANZAR");
+      this._setDirection(this.directionMap.up);
     } else {
-      this._setDirection("GIRAR_DERECHA");
+      this._setDirection(this.directionMap.right);
     }
   }
 
   _setDirection(dir) {
     if (this.currentDirection !== dir) {
       this.currentDirection = dir;
-      const lbl = document.getElementById("lbl-joystick-dir");
-      if (lbl) lbl.textContent = `ESTADO: ${dir}`;
+      if (this.label) {
+        this.label.textContent = dir;
+      }
       if (typeof this.onDirectionChange === "function") {
         this.onDirectionChange(dir);
       }

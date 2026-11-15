@@ -208,3 +208,11 @@ body {
     font-size: 0.55rem;
   }
 }
+
+/* Botones de Sonido y Luz */
+.shadow-glow-cyan {
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.7) !important;
+}
+.shadow-glow-amber {
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.8) !important;
+}

@@ -22,9 +22,18 @@ class App {
       ["BAJAR_BRAZO", 6],
       ["ABRIR_PALA", 7],
       ["CERRAR_PALA", 8],
-      ["DETENER", 9]
+      ["DETENER", 9],
+      ["LUCES", 25],
+      ["SONIDO", 26]
     ]);
     this.isSending = false;
+
+    // Estados de Sonido y Luz
+    this.isSoundOn = false;
+    this.isLightOn = false;
+    this.audioCtx = null;
+    this.soundOsc = null;
+    this.soundGain = null;
 
     // 1. Control de Rutinas DEMO
     this.demoController = new DemoController(
@@ -73,7 +82,7 @@ class App {
   }
 
   async init() {
-    console.log("Iniciando cabina IoT con Dual Joystick: Control, Monitoreo y Administración...");
+    console.log("Iniciando cabina IoT con Dual Joystick, Luz y Sonido...");
     this._updateVehicleHeader();
     this.updateAuthUI();
 
@@ -99,6 +108,18 @@ class App {
       btnStop.addEventListener("click", () => this.handleCommandName("DETENER"));
     }
 
+    // Botón Activar / Desactivar Sonido de la excavadora
+    const btnSound = document.getElementById("btn-toggle-sound");
+    if (btnSound) {
+      btnSound.addEventListener("click", () => this.handleToggleSound());
+    }
+
+    // Botón Encender / Apagar Luz
+    const btnLight = document.getElementById("btn-toggle-light");
+    if (btnLight) {
+      btnLight.addEventListener("click", () => this.handleToggleLight());
+    }
+
     // Botón refrescar diagnósticos, catálogo e historial
     const btnRefresh = document.getElementById("btn-refresh-status");
     if (btnRefresh) {
@@ -109,6 +130,86 @@ class App {
         wsClient.connect();
       });
     }
+  }
+
+  handleToggleSound() {
+    this.isSoundOn = !this.isSoundOn;
+    const btn = document.getElementById("btn-toggle-sound");
+    const icon = document.getElementById("icon-sound");
+    const lbl = document.getElementById("lbl-sound-status");
+
+    if (this.isSoundOn) {
+      this._startEngineAudio();
+      if (btn) btn.className = "btn btn-info text-dark flex-fill py-1 fw-bold d-flex align-items-center justify-content-center gap-1 shadow-glow-cyan";
+      if (icon) icon.className = "bi bi-volume-up-fill fs-6";
+      if (lbl) lbl.textContent = "Sonido: ON";
+      this.statusPanel.setActionMessage("Sonido de motor activado", "SONIDO ON", "bg-info text-dark");
+    } else {
+      this._stopEngineAudio();
+      if (btn) btn.className = "btn btn-outline-info flex-fill py-1 fw-bold d-flex align-items-center justify-content-center gap-1 shadow-sm";
+      if (icon) icon.className = "bi bi-volume-mute-fill fs-6";
+      if (lbl) lbl.textContent = "Sonido: OFF";
+      this.statusPanel.setActionMessage("Sonido desactivado", "SONIDO OFF", "bg-secondary");
+    }
+
+    this.handleCommandName("SONIDO");
+  }
+
+  _startEngineAudio() {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!this.audioCtx) {
+        this.audioCtx = new AudioCtx();
+      }
+      if (this.audioCtx.state === "suspended") {
+        this.audioCtx.resume();
+      }
+      this._stopEngineAudio();
+
+      this.soundOsc = this.audioCtx.createOscillator();
+      this.soundGain = this.audioCtx.createGain();
+
+      this.soundOsc.type = "sawtooth";
+      this.soundOsc.frequency.setValueAtTime(60, this.audioCtx.currentTime); // ~60 Hz motor diésel
+      this.soundGain.gain.setValueAtTime(0.06, this.audioCtx.currentTime);
+
+      this.soundOsc.connect(this.soundGain);
+      this.soundGain.connect(this.audioCtx.destination);
+      this.soundOsc.start();
+    } catch (e) {
+      console.warn("Audio synthesis:", e);
+    }
+  }
+
+  _stopEngineAudio() {
+    if (this.soundOsc) {
+      try {
+        this.soundOsc.stop();
+        this.soundOsc.disconnect();
+      } catch (_) {}
+      this.soundOsc = null;
+    }
+  }
+
+  handleToggleLight() {
+    this.isLightOn = !this.isLightOn;
+    const btn = document.getElementById("btn-toggle-light");
+    const icon = document.getElementById("icon-light");
+    const lbl = document.getElementById("lbl-light-status");
+
+    if (this.isLightOn) {
+      if (btn) btn.className = "btn btn-warning text-dark flex-fill py-1 fw-bold d-flex align-items-center justify-content-center gap-1 shadow-glow-amber";
+      if (icon) icon.className = "bi bi-lightbulb-fill fs-6";
+      if (lbl) lbl.textContent = "Luz: ON";
+      this.statusPanel.setActionMessage("Faros LED encendidos", "LUZ ON", "bg-warning text-dark");
+    } else {
+      if (btn) btn.className = "btn btn-outline-warning flex-fill py-1 fw-bold d-flex align-items-center justify-content-center gap-1 shadow-sm";
+      if (icon) icon.className = "bi bi-lightbulb fs-6";
+      if (lbl) lbl.textContent = "Luz: OFF";
+      this.statusPanel.setActionMessage("Faros LED apagados", "LUZ OFF", "bg-secondary");
+    }
+
+    this.handleCommandName("LUCES");
   }
 
   _bindAuthEvents() {

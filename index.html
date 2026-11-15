@@ -156,10 +156,22 @@
           </div>
         </div>
 
-        <!-- FILA DE PARADA DE EMERGENCIA Y CONTROL DEMO COMPACTO -->
+        <!-- FILA DE PARADA DE EMERGENCIA Y CONTROLES AUXILIARES -->
         <div class="col-12 col-md-10 col-lg-8">
           <div class="control-card p-2 rounded-4 border border-secondary shadow">
             
+            <!-- BOTONES AUXILIARES: LUZ Y SONIDO -->
+            <div class="d-flex gap-2 mb-2">
+              <button id="btn-toggle-sound" class="btn btn-outline-info flex-fill py-1 fw-bold d-flex align-items-center justify-content-center gap-1 shadow-sm" type="button" style="font-size: 0.8rem;" title="Activar / desactivar sonido del motor">
+                <i class="bi bi-volume-mute-fill fs-6" id="icon-sound"></i>
+                <span id="lbl-sound-status">Sonido: OFF</span>
+              </button>
+              <button id="btn-toggle-light" class="btn btn-outline-warning flex-fill py-1 fw-bold d-flex align-items-center justify-content-center gap-1 shadow-sm" type="button" style="font-size: 0.8rem;" title="Encender / apagar faros LED">
+                <i class="bi bi-lightbulb fs-6" id="icon-light"></i>
+                <span id="lbl-light-status">Luz: OFF</span>
+              </button>
+            </div>
+
             <!-- BOTÓN DETENER (PRIORIDAD MÁXIMA) -->
             <button id="btn-stop-emergency" class="btn btn-danger w-100 py-2 fw-bolder text-uppercase tracking-wider shadow d-flex align-items-center justify-content-center gap-2 mb-2" type="button" style="font-size: 0.95rem;">
               <i class="bi bi-stop-circle-fill fs-5"></i> DETENER VEHÍCULO

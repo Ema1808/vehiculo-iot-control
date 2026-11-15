@@ -11,12 +11,17 @@ export class ApiClient {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), options.timeout || this.defaultTimeout);
 
+    // Obtener token JWT de sesión si existe
+    const token = sessionStorage.getItem("iot_auth_token");
+    const authHeaders = token ? { "Authorization": `Bearer ${token}` } : {};
+
     const config = {
       ...options,
       signal: controller.signal,
       headers: {
         "Content-Type": "application/json",
         "Accept": "application/json",
+        ...authHeaders,
         ...(options.headers || {})
       }
     };
@@ -52,5 +57,17 @@ export class ApiClient {
       method: "POST",
       body: JSON.stringify(body)
     });
+  }
+
+  put(endpoint, body = {}, options = {}) {
+    return this.request(endpoint, {
+      ...options,
+      method: "PUT",
+      body: JSON.stringify(body)
+    });
+  }
+
+  delete(endpoint, options = {}) {
+    return this.request(endpoint, { ...options, method: "DELETE" });
   }
 }

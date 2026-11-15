@@ -6,52 +6,129 @@ class VehicleService {
     this.client = new ApiClient();
   }
 
-  // 1. Diagnóstico del Servidor AWS (API Health)
+  // --- 1. DIAGNÓSTICOS Y SALUD ---
   async checkApiHealth() {
     return await this.client.get(CONFIG.ENDPOINTS.HEALTH);
   }
 
-  // 2. Diagnóstico de Persistencia en RDS (Consulta de estado)
-  async checkRdsConnection() {
-    return await this.client.get(CONFIG.ENDPOINTS.ESTADO);
+  async checkRdsConnection(idVehiculo = CONFIG.VEHICLE_ID) {
+    return await this.client.get(CONFIG.ENDPOINTS.ESTADO(idVehiculo));
   }
 
-  // Consulta detallada del último estado real
-  async getEstado() {
-    return await this.client.get(CONFIG.ENDPOINTS.ESTADO);
+  // --- 2. OPERACIÓN Y TELEMETRÍA (4.1 & 4.2) ---
+  async getEstado(idVehiculo = CONFIG.VEHICLE_ID) {
+    return await this.client.get(CONFIG.ENDPOINTS.ESTADO(idVehiculo));
   }
 
-  // Consulta de los 10 movimientos individuales más recientes (sp_obtener_historial)
-  async getHistorial() {
-    return await this.client.get(CONFIG.ENDPOINTS.HISTORIAL);
+  async getHistorial(idVehiculo = CONFIG.VEHICLE_ID) {
+    return await this.client.get(CONFIG.ENDPOINTS.HISTORIAL(idVehiculo));
   }
 
-  // 3. Catálogo de Comandos del Vehículo
-  async getComandos() {
-    return await this.client.get(CONFIG.ENDPOINTS.COMANDOS);
+  async getComandos(idVehiculo = CONFIG.VEHICLE_ID) {
+    return await this.client.get(CONFIG.ENDPOINTS.COMANDOS(idVehiculo));
   }
 
-  // 4. Catálogo de Demos
-  async getDemos() {
-    return await this.client.get(CONFIG.ENDPOINTS.DEMOS);
+  async getDemos(idVehiculo = CONFIG.VEHICLE_ID) {
+    return await this.client.get(CONFIG.ENDPOINTS.DEMOS(idVehiculo));
   }
 
-  // 5. Enviar Movimiento Individual (Transacción atómica en backend)
-  async enviarMovimiento(idComando, origen = "WEB-CONTROL") {
-    return await this.client.post(CONFIG.ENDPOINTS.MOVIMIENTO, {
+  async enviarMovimiento(idComando, origen = "WEB-CONTROL", idVehiculo = CONFIG.VEHICLE_ID) {
+    return await this.client.post(CONFIG.ENDPOINTS.MOVIMIENTO(idVehiculo), {
       id_comando: Number(idComando),
       origen: String(origen)
     });
   }
 
-  // 6. Iniciar DEMO en Servidor
-  async iniciarDemo(idDemo) {
-    return await this.client.post(CONFIG.ENDPOINTS.INICIAR_DEMO(idDemo));
+  async iniciarDemo(idDemo, idVehiculo = CONFIG.VEHICLE_ID) {
+    return await this.client.post(CONFIG.ENDPOINTS.INICIAR_DEMO(idVehiculo, idDemo));
   }
 
-  // 7. Cancelar DEMO en Servidor
-  async cancelarDemo() {
-    return await this.client.post(CONFIG.ENDPOINTS.CANCELAR_DEMO);
+  async cancelarDemo(idVehiculo = CONFIG.VEHICLE_ID) {
+    return await this.client.post(CONFIG.ENDPOINTS.CANCELAR_DEMO(idVehiculo));
+  }
+
+  // --- 3. AUTENTICACIÓN Y ROLES (4.3) ---
+  async login(email, password) {
+    const res = await this.client.post(CONFIG.AUTH.LOGIN, { email, password });
+    if (res && res.access_token) {
+      sessionStorage.setItem("iot_auth_token", res.access_token);
+      sessionStorage.setItem("iot_user", JSON.stringify(res.user));
+    }
+    return res;
+  }
+
+  async getMe() {
+    return await this.client.get(CONFIG.AUTH.ME);
+  }
+
+  async logout() {
+    try {
+      await this.client.post(CONFIG.AUTH.LOGOUT);
+    } catch (e) {
+      console.warn("Aviso en logout:", e);
+    } finally {
+      sessionStorage.removeItem("iot_auth_token");
+      sessionStorage.removeItem("iot_user");
+    }
+  }
+
+  getCurrentUser() {
+    const raw = sessionStorage.getItem("iot_user");
+    return raw ? JSON.parse(raw) : null;
+  }
+
+  // --- 4. PANEL ADMINISTRATIVO (ADMIN) ---
+  async getDashboardMetrics() {
+    return await this.client.get(CONFIG.ADMIN.METRICAS);
+  }
+
+  async getModelos() {
+    return await this.client.get(CONFIG.ADMIN.MODELOS);
+  }
+
+  async createModelo(data) {
+    return await this.client.post(CONFIG.ADMIN.MODELOS, data);
+  }
+
+  async getUnidades() {
+    return await this.client.get(CONFIG.ADMIN.UNIDADES);
+  }
+
+  async createUnidad(data) {
+    return await this.client.post(CONFIG.ADMIN.UNIDADES, data);
+  }
+
+  async getClientes() {
+    return await this.client.get(CONFIG.ADMIN.CLIENTES);
+  }
+
+  async getAsignaciones() {
+    return await this.client.get(CONFIG.ADMIN.ASIGNACIONES);
+  }
+
+  async assignVehiculo(data) {
+    return await this.client.post(CONFIG.ADMIN.ASIGNACIONES, data);
+  }
+
+  async getBitacora(limite = 50) {
+    return await this.client.get(`${CONFIG.ADMIN.BITACORA}?limite=${limite}`);
+  }
+
+  // --- 5. PORTAL DE USUARIOS E INVITADOS ---
+  async getMisVehiculos() {
+    return await this.client.get(CONFIG.PORTAL.MIS_VEHICULOS);
+  }
+
+  async toggleSoporte(idVehiculo, autoriza) {
+    return await this.client.post(`${CONFIG.PORTAL.AUTORIZAR_SOPORTE(idVehiculo)}?autoriza=${autoriza}`);
+  }
+
+  async getCatalogoPublico() {
+    return await this.client.get(CONFIG.PORTAL.CATALOGO);
+  }
+
+  async reservarPruebaInvitado(idVehiculo) {
+    return await this.client.post(CONFIG.PORTAL.RESERVAR_INVITADO, { id_vehiculo: idVehiculo });
   }
 }
 

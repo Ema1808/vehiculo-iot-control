@@ -31,6 +31,23 @@ export class WebSocketClient {
     }
   }
 
+  setUrl(newUrl) {
+    if (this.url !== newUrl) {
+      this.disconnect();
+      this.url = newUrl;
+      this.shouldReconnect = true;
+      this.reconnectAttempts = 0;
+      this.connect();
+    }
+  }
+
+  reconnectWithAuth() {
+    this.disconnect();
+    this.shouldReconnect = true;
+    this.reconnectAttempts = 0;
+    this.connect();
+  }
+
   connect() {
     if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
       return;
@@ -39,7 +56,14 @@ export class WebSocketClient {
     this._updateStatus("CONNECTING");
 
     try {
-      this.ws = new WebSocket(this.url);
+      const token = sessionStorage.getItem("iot_auth_token");
+      let fullUrl = this.url;
+      if (token) {
+        const separator = fullUrl.includes("?") ? "&" : "?";
+        fullUrl += `${separator}token=${encodeURIComponent(token)}`;
+      }
+
+      this.ws = new WebSocket(fullUrl);
 
       this.ws.onopen = () => {
         this.reconnectAttempts = 0;
@@ -84,6 +108,7 @@ export class WebSocketClient {
     this.shouldReconnect = false;
     if (this.ws) {
       this.ws.close();
+      this.ws = null;
     }
   }
 }

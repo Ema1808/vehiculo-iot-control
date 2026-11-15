@@ -1,6 +1,6 @@
 /**
- * Gestor de navegación entre las vistas de CONTROL y MONITOREO.
- * Garantiza accesibilidad ARIA, gestión de teclado y eventos limpios.
+ * Gestor de navegación entre las vistas de CONTROL, MONITOREO y ADMINISTRACIÓN.
+ * Garantiza accesibilidad ARIA, gestión de teclado y actualización limpia de vistas.
  */
 export class Navigation {
   constructor(onViewChange) {
@@ -10,7 +10,8 @@ export class Navigation {
     this.navBtns = document.querySelectorAll("[data-nav-view]");
     this.views = {
       control: document.getElementById("view-control"),
-      monitoreo: document.getElementById("view-monitoreo")
+      monitoreo: document.getElementById("view-monitoreo"),
+      administracion: document.getElementById("view-administracion")
     };
 
     this._bindEvents();
@@ -29,12 +30,16 @@ export class Navigation {
   }
 
   switchView(viewName) {
+    // Re-evaluar vistas por si se agregaron dinámicamente
+    if (!this.views[viewName]) {
+      this.views[viewName] = document.getElementById(`view-${viewName}`);
+    }
     if (!this.views[viewName]) return;
 
     this.currentView = viewName;
 
     // Actualizar botones de navegación
-    this.navBtns.forEach(btn => {
+    document.querySelectorAll("[data-nav-view]").forEach(btn => {
       const isActive = btn.dataset.navView === viewName;
       btn.classList.toggle("active", isActive);
       btn.setAttribute("aria-selected", isActive ? "true" : "false");

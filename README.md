@@ -1,143 +1,148 @@
-# Plataforma Web de Control y Monitoreo IoT · Excavadora (Mobile First)
+# Plataforma Web de Control, Monitoreo y Administración IoT · Excavadora (Mobile First)
 
-Aplicación web integral, modular, reactiva y responsiva desarrollada para el **Control Operativo** y **Monitoreo en Tiempo Real** de un vehículo robótico IoT (Excavadora), consumiendo servicios REST y WebSockets seguros (WSS) desplegados en **Amazon EC2** y persistidos en **Amazon RDS for MySQL**.
+Aplicación web integral, modular, reactiva y responsiva desarrollada como evolución de las prácticas 4.1 y 4.2, integrando la tercera aplicación de **ADMINISTRACIÓN COMERCIAL IoT (Práctica 4.3)**. El sistema se conecta a servicios REST y WebSocket seguros (WSS) desplegados en **Amazon EC2** y persistidos en **Amazon RDS for MySQL**.
+
+* **Frontend Producción (GitHub Pages):** [https://ema1808.github.io/vehiculo-iot-control/](https://ema1808.github.io/vehiculo-iot-control/)
+* **Backend API Swagger:** [https://vehiculo-iot-excavadora.duckdns.org/docs](https://vehiculo-iot-excavadora.duckdns.org/docs)
+* **Desarrollado por:** Emanuel González Mayorga · 2026
 
 ---
 
 ## 1. Arquitectura del Sistema
 
 ```mermaid
-flowchart LR
-    subgraph Frontend["Frontend (GitHub Pages)"]
-        UI_Control["Vista CONTROL\n(Joystick, Actuadores, DEMO)"]
-        UI_Monitoreo["Vista MONITOREO\n(Último Estado, Tabla 10 Movimientos)"]
-        WSC["Cliente WSS\n(Sesión Única Persistente)"]
-        HTTPC["Cliente REST Fetch\n(Timeout / AbortController)"]
+flowchart TD
+    subgraph Frontend["Frontend Unificado (GitHub Pages)"]
+        Nav["Barra de Navegación Compacta + Modal de Autenticación"]
+        UI_Control["1. CONTROL
+(Cabina Dual Joystick, Sonido Web Audio, Luces LED, DETENER, DEMO)"]
+        UI_Monitoreo["2. MONITOREO
+(Último Estado, Historial 10 RDS, Sincronización WSS)"]
+        UI_Admin["3. ADMINISTRACIÓN
+(Dashboard Métricas, Modelos, Unidades, Mis Vehículos, Invitado)"]
+        WSC["Cliente WebSocket Seguro
+(WSS / Canal por Vehículo con Token)"]
+        HTTPC["Cliente REST Fetch
+(Bearer JWT / AbortController / Timeout)"]
     end
 
     subgraph AWS_EC2["Amazon EC2 (Windows Server)"]
-        Caddy["Proxy Inverso Caddy\n(SSL TLS Let's Encrypt / HTTPS)"]
-        FastAPI["Backend FastAPI (Python / POO)\n(21 Stored Procedures, WSS Broadcast)"]
+        Caddy["Proxy Inverso Caddy
+(SSL TLS Let's Encrypt / HTTPS DuckDNS)"]
+        FastAPI["Backend FastAPI v2.0 (Python)
+(RBAC, Anti-BOLA/IDOR, 21 Stored Procedures, WSS Broadcast)"]
     end
 
     subgraph AWS_RDS["Amazon RDS"]
-        MySQL[("MySQL 8.0\nBase: vehiculo_iot")]
+        MySQL[("MySQL 8.4 Engine
+Base: vehiculo_iot (12 Tablas)")]
     end
+
+    Nav --> UI_Control
+    Nav --> UI_Monitoreo
+    Nav --> UI_Admin
 
     UI_Control --> HTTPC
     UI_Monitoreo --> HTTPC
+    UI_Admin --> HTTPC
     UI_Control -.-> WSC
     UI_Monitoreo -.-> WSC
 
-    HTTPC -->|HTTPS / REST| Caddy
+    HTTPC -->|HTTPS / REST / JWT| Caddy
     WSC <-->|WSS / Bidireccional| Caddy
     Caddy --> FastAPI
-    FastAPI <-->|PyMySQL Pool| MySQL
+    FastAPI <-->|PyMySQL Pool Parametrizado| MySQL
 ```
 
 ---
 
-## 2. Estructura del Proyecto
+## 2. Tres Vistas Integradas
+
+### 1. Vista de CONTROL (Práctica 4.1)
+* **Cabina Dual Joystick Táctil:**
+  * **Joystick Izquierdo (Dirección):** Avanzar, Reversa, Giro Izquierda, Giro Derecha. Retorno elástico a neutral (`DETENER`).
+  * **Joystick Derecho (Actuadores):** Subir Brazo, Bajar Brazo, Abrir Pala, Cerrar Pala. Retorno elástico a neutral.
+  * **Soporte Multi-Touch Simultáneo:** Operación independiente con ambos pulgares en pantallas móviles.
+* **Botones Auxiliares de Cabina:**
+  * **🔊 Sonido de Excavadora:** Síntesis sonora en tiempo real de motor diésel mediante la *Web Audio API* nativa del navegador y emisión del comando `SONIDO`.
+  * **💡 Luces LED Frontales:** Alternancia visual con halo dorado luminoso y emisión del comando `LUCES`.
+* **Parada de Emergencia Prioritaria:** Botón rojo prominente `DETENER VEHÍCULO`.
+* **Rutinas DEMO Autónomas:** Selector, inicio y cancelación en una sola fila compacta.
+* **Diseño Zero-Scroll:** 100% visible en pantallas móviles sin necesidad de deslizar hacia abajo.
+
+### 2. Vista de MONITOREO (Práctica 4.2)
+* **Tarjeta de Último Movimiento / Estado:** Indicador en tiempo real del comando activo, código numérico, origen del evento y fecha/hora del servidor.
+* **Tabla de los 10 Movimientos Persistidos:** Consulta semántica a Amazon RDS for MySQL (`sp_obtener_historial`) con diseño responsivo anti-desbordamiento.
+* **Sincronización Reactiva:** Actualización instantánea ante eventos manuales o remotos mediante WebSocket seguro sin polling destructivo.
+
+### 3. Vista de ADMINISTRACIÓN y RBAC (Práctica 4.3)
+Adaptación dinámica de la interfaz según el rol del usuario autenticado:
+* **Modo ADMINISTRADOR (`admin@iot.com`):**
+  * Dashboard de métricas consolidadas (modelos, unidades totales, vendidas, exhibición, clientes, movimientos históricos).
+  * Catálogo de modelos comerciales y microcontrolador base.
+  * Inventario de unidades físicas con números de serie y estado comercial (`DISPONIBLE`, `VENDIDO`, `EXHIBICION`).
+  * Asignación de vehículos a clientes y bitácora de auditoría.
+* **Modo USUARIO / COMPRADOR (`comprador@iot.com`):**
+  * Portal **Mis Vehículos** con tarjetas de unidades asignadas.
+  * Conmutador para **Autorizar Soporte Técnico** al personal de la empresa.
+  * Botón para cambiar de vehículo activo, adaptando el control y reconectando el canal WebSocket.
+* **Modo INVITADO (`invitado@iot.com`):**
+  * Catálogo comercial público con especificaciones técnicas.
+  * Reserva temporal exclusiva de **3 minutos** en la unidad física de exhibición (`Excavadora Expo`), con temporizador de cuenta regresiva en vivo y detención automática al expirar.
+
+---
+
+## 3. Credenciales de Prueba por Rol
+
+| Rol | Correo Electrónico | Contraseña | Alcance de Permisos |
+| :--- | :--- | :--- | :--- |
+| **ADMINISTRADOR** | `admin@iot.com` | `admin123` | Inventario, modelos, unidades, clientes, asignaciones y auditoría. *(No opera unidades vendidas sin soporte autorizado).* |
+| **USUARIO** | `comprador@iot.com` | `comprador123` | Acceso exclusivo a sus unidades compradas, autorización de soporte, control y monitoreo privado. *(Protección Anti-BOLA/IDOR).* |
+| **INVITADO** | `invitado@iot.com` | `invitado123` | Catálogo comercial público y prueba temporal de 3 minutos en unidad de exhibición. |
+
+> El modal de inicio de sesión (`#modal-auth`) cuenta con 3 botones de acceso rápido para rellenar e iniciar sesión con un solo clic.
+
+---
+
+## 4. Estructura de Archivos del Frontend
 
 ```plaintext
 vehiculo-iot-control/
+├── .github/
+│   └── workflows/
+│       └── static.yml        # CI/CD de despliegue automático a GitHub Pages
 ├── .gitignore
-├── favicon.svg              # Icono vectorial para navegador y PWA
-├── index.html               # Vistas semánticas accesibles (Control y Monitoreo)
-├── README.md                # Documentación técnica completa y casos de prueba
-├── monitor.py               # Monitor de consola en tiempo real vía WebSocket
+├── .nojekyll                 # Bypass para Jekyll en GitHub Pages
+├── favicon.svg               # Favicon vectorial oficial
+├── index.html                # Estructura semántica con 3 vistas y modal de autenticación
+├── README.md                 # Documentación técnica completa
 ├── css/
-│   └── styles.css           # Tema oscuro industrial, joystick polar y tabla responsiva
+│   └── styles.css            # Estilos Mobile First, cabina dual joystick, brillo y tablas
 └── js/
-    ├── app.js               # Orquestador del ciclo de vida y eventos globales
-    ├── config.js            # Configuración centralizada de endpoints y tiempos
+    ├── app.js                # Orquestador del ciclo de vida, joysticks, audio y eventos globales
+    ├── config.js             # Configuración centralizada de endpoints y WebSocket
     ├── api/
-    │   ├── apiClient.js     # Cliente Fetch con AbortController y manejo de errores
-    │   └── vehicleService.js# Consumo de endpoints reales del vehículo
+    │   ├── apiClient.js      # Cliente Fetch con inyección automática de Bearer Token JWT
+    │   └── vehicleService.js # Consumo de APIs REST (salud, comandos, estado, admin, portal)
     ├── components/
-    │   ├── actionButtons.js # Botones de actuadores (Brazo y Pala)
-    │   ├── demoController.js# Control de secuencias autónomas DEMO
-    │   ├── joystick.js      # Joystick virtual táctil (Pointer Events)
-    │   ├── monitoringView.js# Vista de Monitoreo: Tarjeta de estado y tabla de 10 registros
-    │   ├── navigation.js    # Gestor de pestañas accesibles (Control / Monitoreo)
-    │   └── statusPanel.js   # Panel de 3 indicadores (WSS, Servidor AWS, Base RDS)
+    │   ├── actionButtons.js  # Gestor de botones auxiliares
+    │   ├── adminView.js      # Vista adaptativa de Administración por rol (Admin/User/Guest)
+    │   ├── demoController.js # Controlador de secuencias DEMO autónomas
+    │   ├── joystick.js       # Clase VirtualJoystick táctil multi-touch
+    │   ├── monitoringView.js # Vista de Monitoreo (tarjeta y tabla de 10 registros)
+    │   ├── navigation.js     # Gestor de pestañas accesibles (Control / Monitoreo / Admin)
+    │   └── statusPanel.js    # Tira de conectividad (WSS, AWS API, RDS)
     ├── utils/
-    │   └── dateFormatter.js # Formateo seguro y localizado de fechas y horas
+    │   └── dateFormatter.js  # Formateo de fecha y hora localizada
     └── ws/
-        └── wsClient.js      # Cliente WebSocket seguro con reconexión automática
+        └── wsClient.js       # Cliente WebSocket seguro con reconexión y soporte de token
 ```
 
 ---
 
-## 3. Contratos de la API REST y WebSocket
+## 5. Indicadores de Conectividad Independientes
 
-| Método | Endpoint | Descripción | Stored Procedure |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/` | Diagnóstico de salud de la API | N/A |
-| `GET` | `/vehiculos/1/estado` | Último estado persistido | `sp_obtener_estado` |
-| `GET` | `/vehiculos/1/historial` | Últimos 10 movimientos individuales | `sp_obtener_historial` |
-| `GET` | `/vehiculos/1/comandos` | Catálogo de comandos del vehículo | `sp_obtener_comandos_vehiculo` |
-| `POST`| `/vehiculos/1/movimiento`| Registro atómico de movimiento individual | `sp_actualizar_estado` + `sp_registrar_historial` |
-| `GET` | `/vehiculos/1/demos` | Catálogo de rutinas DEMO | `sp_obtener_demos` |
-| `POST`| `/vehiculos/1/demos/{id}/iniciar` | Iniciar rutina DEMO en segundo plano | `sp_obtener_movimientos_demo` |
-| `POST`| `/vehiculos/1/demos/cancelar` | Cancelar DEMO en curso | En memoria |
-| `WSS` | `/ws/vehiculos/1` | Canal de eventos en vivo | N/A |
-
-### Reglas de Negocio Clave
-1. **Historial Acotado:** `GET /vehiculos/1/historial` limita a un máximo de 10 registros para optimizar memoria y rendimiento.
-2. **Aislamiento de DEMO:** Los pasos de una rutina DEMO actualizan el estado visual en tiempo real vía WebSocket, pero **no** se insertan en la tabla `historial_comandos`, protegiendo la trazabilidad de operaciones manuales.
-3. **Prioridad de Detener:** Cualquier pérdida de puntero táctil en el joystick solicita `DETENER` inmediatamente.
-
----
-
-## 4. Guía de Ejecución Local
-
-1. Clona el repositorio:
-   ```bash
-   git clone https://github.com/Ema1808/vehiculo-iot-control.git
-   cd vehiculo-iot-control
-   ```
-2. Levanta un servidor local:
-   ```bash
-   python -m http.server 3000
-   ```
-3. Abre tu navegador en: `http://localhost:3000`
-
----
-
-## 5. Publicación en GitHub Pages
-
-1. Sube tu código en la rama `main`:
-   ```bash
-   git add .
-   git commit -m "feat: modulo de monitoreo en tiempo real con historial de 10 registros"
-   git push origin main
-   ```
-2. En GitHub: **Settings** ➔ **Pages** ➔ **Source: Deploy from a branch** ➔ Rama **`main`** ➔ Carpeta **`/ (root)`**.
-3. Acceso público HTTPS: `https://ema1808.github.io/vehiculo-iot-control/`
-
----
-
-## 6. Casos de Prueba Verificables
-
-| # | Caso de Prueba | Procedimiento | Resultado Esperado |
-| :--- | :--- | :--- | :--- |
-| **CP01** | Carga Inicial y Diagnósticos | Abrir el sitio | Los 3 indicadores pasan a verde (`En línea`, `Disponible`, `Disponible`). Se cargan comandos y catálogo DEMO. |
-| **CP02** | Navegación entre Vistas | Clic en pestaña *Monitoreo* | La vista cambia suavemente sin recargar; se consulta REST y se renderiza la tarjeta de estado y la tabla. |
-| **CP03** | Envío de Movimiento Individual | Clic en *Subir Brazo* en pestaña *Control* | Envía `POST /movimiento`, status pasa a `OK` y se emite evento WSS. |
-| **CP04** | Telemetría en Segunda Pestaña | Abrir dos pestañas (una en Control y otra en Monitoreo) | Al mover el joystick en la primera pestaña, la tarjeta y tabla de la segunda pestaña se actualizan en <100ms. |
-| **CP05** | Límite Estricto de 10 Registros | Ejecutar más de 10 movimientos consecutivos | La tabla muestra estrictamente 10 filas (#1 al #10), ordenadas descendentemente por fecha/hora. |
-| **CP06** | Formato de Fecha y Hora | Revisar columna *Fecha y Hora* | Se muestra hora local legible `DD/MM/AAAA HH:mm:ss` sin valores `null` o `undefined`. |
-| **CP07** | Aislamiento de DEMO | Iniciar una DEMO desde *Control* y observar *Monitoreo* | La tarjeta muestra los pasos de DEMO en tiempo real; la tabla de historial **no** se contamina con pasos de DEMO. |
-| **CP08** | Parada de Emergencia | Presionar botón rojo `DETENER` | Cancela DEMO activa, envía comando 9 y tarjeta de monitoreo cambia inmediatamente a rojo `DETENER`. |
-| **CP09** | Recuperación ante Reconexión | Desconectar Wi-Fi por 5s y reconectar | WSS pasa a amarillo `Reconectando` y luego a verde `En línea`, resincronizando automáticamente la tabla con REST. |
-| **CP10** | Validación Externa WSS | Conectar Thunder Client a `wss://.../ws/vehiculos/1` | Se recibe la trama JSON `MOVIMIENTO_INDIVIDUAL` en tiempo real simultáneamente con el navegador. |
-
----
-
-## 7. Créditos y Autoría
-
-* **Estudiante:** Emanuel González Mayorga
-* **Año:** 2026
-* **Institución:** Instituto Tecnológico de Pachuca · TecNM
-* **Especialidad:** Internet de las Cosas (IoT) · Arquitectura Cloud AWS
+La aplicación cuenta con 3 indicadores independientes en el encabezado:
+1. **Canal WSS (`#lbl-status-ws`):** Verifica el socket activo del navegador (`En línea`, `Reconectando`, `Desconectado`).
+2. **Servidor AWS (`#lbl-status-api`):** Verifica la disponibilidad de la API REST en Amazon EC2 (`Disponible`, `Comprobando`, `No disponible`).
+3. **Base RDS (`#lbl-status-rds`):** Diagnóstico reportado por el backend sobre la conexión a MySQL en Amazon RDS (`Disponible`, `No disponible`, `Sin verificar`).

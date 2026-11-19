@@ -158,6 +158,11 @@ export class AdminView {
                 <i class="bi bi-journal-text me-1"></i> Bitácora de Auditoría
               </button>
             </li>
+            <li class="nav-item">
+              <button class="nav-link text-secondary fw-semibold" data-admin-subtab="demos">
+                <i class="bi bi-play-btn me-1"></i> Editor de Demos
+              </button>
+            </li>
           </ul>
 
           <div id="admin-subtab-content" class="control-card p-3 rounded-4 border border-secondary shadow-lg">
@@ -288,6 +293,8 @@ export class AdminView {
             </table>
           </div>
         `;
+      } else if (tabName === "demos") {
+        await this._renderDemoEditor(box);
       } else if (tabName === "auditoria") {
         const logs = await vehicleService.getBitacora(25);
         box.innerHTML = `
@@ -556,4 +563,301 @@ export class AdminView {
       default: return "bg-secondary";
     }
   }
+
+  // =========================================================================
+  // EDITOR VISUAL DE RUTINAS DEMO (PRÁCTICA 4.3 - PUNTO 9)
+  // =========================================================================
+  async _renderDemoEditor(container, targetVehicleId = 1) {
+    container.innerHTML = `
+      <div class="row g-3">
+        <!-- Diseñador de Secuencias -->
+        <div class="col-12 col-lg-7">
+          <div class="p-3 rounded bg-dark border border-secondary">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <h3 class="h6 mb-0 text-uppercase tracking-wider text-secondary">Diseñador de Rutinas DEMO</h3>
+              <span class="badge bg-info text-dark" id="demo-total-duration">⏱ Total: 0.0s (0 pasos)</span>
+            </div>
+            <p class="small text-secondary mb-3">Diseña secuencias autónomas de pasos ordenados y guárdalas directamente en Amazon RDS MySQL.</p>
+
+            <form id="form-create-demo">
+              <div class="mb-2">
+                <label class="form-label small text-secondary mb-1">Nombre de la Rutina DEMO</label>
+                <input type="text" class="form-control form-control-sm bg-black text-light border-secondary" id="demo-name-input" placeholder="Ej: Excavación y Acopio Automático" required>
+              </div>
+              <div class="mb-3">
+                <label class="form-label small text-secondary mb-1">Descripción</label>
+                <input type="text" class="form-control form-control-sm bg-black text-light border-secondary" id="demo-desc-input" placeholder="Secuencia de demostración comercial">
+              </div>
+
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <h4 class="h6 small text-uppercase text-secondary mb-0">Pasos de la Secuencia</h4>
+                <button type="button" class="btn btn-xs btn-outline-success py-1 px-2" id="btn-add-demo-step">
+                  <i class="bi bi-plus-circle me-1"></i> Agregar Paso
+                </button>
+              </div>
+
+              <!-- Tabla interactiva de pasos -->
+              <div class="table-responsive mb-3" style="max-height: 250px;">
+                <table class="table table-dark table-sm align-middle mb-0" id="table-demo-steps">
+                  <thead class="text-secondary small font-monospace">
+                    <tr>
+                      <th style="width: 35px;">#</th>
+                      <th>Comando</th>
+                      <th style="width: 105px;">Duración (ms)</th>
+                      <th style="width: 105px;">Pausa (ms)</th>
+                      <th style="width: 40px;"></th>
+                    </tr>
+                  </thead>
+                  <tbody id="demo-steps-tbody">
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary btn-sm flex-grow-1 fw-bold py-2" id="btn-save-demo">
+                  <i class="bi bi-cloud-arrow-up-fill me-1"></i> Guardar Rutina en Amazon RDS
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm py-2 px-3" id="btn-reset-demo">
+                  Limpiar
+                </button>
+              </div>
+            </form>
+            <div id="demo-alert-msg" class="mt-2 d-none"></div>
+          </div>
+        </div>
+
+        <!-- Lista de Rutinas Existentes -->
+        <div class="col-12 col-lg-5">
+          <div class="p-3 rounded bg-dark border border-secondary">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <h3 class="h6 mb-0 text-uppercase tracking-wider text-secondary">Rutinas en Amazon RDS</h3>
+              <button class="btn btn-xs btn-outline-secondary" id="btn-refresh-demos-list" title="Refrescar lista">
+                <i class="bi bi-arrow-clockwise"></i>
+              </button>
+            </div>
+            <p class="small text-secondary mb-3">Rutinas guardadas en la base de datos para la Excavadora IoT #1.</p>
+            <div id="demo-existing-list" class="d-flex flex-column gap-2" style="max-height: 380px; overflow-y: auto;">
+              <div class="text-center py-3 text-secondary small">
+                <span class="spinner-border spinner-border-sm me-1"></span> Consultando rutinas...
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Comandos disponibles para pasos
+    const availableCommands = [
+      { id: 1, name: "AVANZAR" },
+      { id: 2, name: "RETROCEDER" },
+      { id: 3, name: "GIRAR_IZQ" },
+      { id: 4, name: "GIRAR_DER" },
+      { id: 5, name: "SUBIR_BRAZO" },
+      { id: 6, name: "BAJAR_BRAZO" },
+      { id: 7, name: "ABRIR_PALA" },
+      { id: 8, name: "CERRAR_PALA" },
+      { id: 9, name: "DETENER" },
+      { id: 25, name: "LUCES" },
+      { id: 26, name: "SONIDO" }
+    ];
+
+    let currentSteps = [
+      { id_comando: 1, comando_nombre: "AVANZAR", duracion_ms: 1500, pausa_ms: 300 },
+      { id_comando: 5, comando_nombre: "SUBIR_BRAZO", duracion_ms: 1000, pausa_ms: 200 },
+      { id_comando: 7, comando_nombre: "ABRIR_PALA", duracion_ms: 800, pausa_ms: 200 },
+      { id_comando: 9, comando_nombre: "DETENER", duracion_ms: 500, pausa_ms: 0 }
+    ];
+
+    const updateStepsUI = () => {
+      const tbody = document.getElementById("demo-steps-tbody");
+      const durationBadge = document.getElementById("demo-total-duration");
+      if (!tbody) return;
+
+      if (currentSteps.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-secondary small py-3">No hay pasos agregados. Pulsa "+ Agregar Paso".</td></tr>`;
+        if (durationBadge) durationBadge.textContent = "⏱ Total: 0.0s (0 pasos)";
+        return;
+      }
+
+      let totalMs = 0;
+      tbody.innerHTML = currentSteps.map((step, idx) => {
+        totalMs += (Number(step.duracion_ms) || 0) + (Number(step.pausa_ms) || 0);
+        const optionsHtml = availableCommands.map(cmd =>
+          `<option value="${cmd.id}" ${cmd.id === step.id_comando ? "selected" : ""}>${cmd.name}</option>`
+        ).join("");
+
+        return `
+          <tr data-step-index="${idx}">
+            <td class="font-monospace text-secondary">${idx + 1}</td>
+            <td>
+              <select class="form-select form-select-sm bg-black text-light border-secondary step-cmd-select" data-idx="${idx}">
+                ${optionsHtml}
+              </select>
+            </td>
+            <td>
+              <input type="number" class="form-control form-control-sm bg-black text-light border-secondary step-duration-input" data-idx="${idx}" value="${step.duracion_ms}" min="100" max="10000" step="100">
+            </td>
+            <td>
+              <input type="number" class="form-control form-control-sm bg-black text-light border-secondary step-pause-input" data-idx="${idx}" value="${step.pausa_ms}" min="0" max="5000" step="50">
+            </td>
+            <td class="text-center">
+              <button type="button" class="btn btn-xs btn-outline-danger btn-remove-step" data-idx="${idx}" title="Eliminar paso">
+                <i class="bi bi-trash"></i>
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join("");
+
+      if (durationBadge) {
+        durationBadge.textContent = `⏱ Total: ${(totalMs / 1000).toFixed(1)}s (${currentSteps.length} pasos)`;
+      }
+    };
+
+    updateStepsUI();
+
+    // Eventos de la tabla de pasos
+    document.getElementById("btn-add-demo-step")?.addEventListener("click", () => {
+      currentSteps.push({ id_comando: 1, comando_nombre: "AVANZAR", duracion_ms: 1000, pausa_ms: 200 });
+      updateStepsUI();
+    });
+
+    document.getElementById("table-demo-steps")?.addEventListener("change", (e) => {
+      const idx = Number(e.target.dataset.idx);
+      if (isNaN(idx) || !currentSteps[idx]) return;
+
+      if (e.target.classList.contains("step-cmd-select")) {
+        const cmdId = Number(e.target.value);
+        currentSteps[idx].id_comando = cmdId;
+        const found = availableCommands.find(c => c.id === cmdId);
+        currentSteps[idx].comando_nombre = found ? found.name : "COMANDO";
+      } else if (e.target.classList.contains("step-duration-input")) {
+        currentSteps[idx].duracion_ms = Number(e.target.value) || 500;
+        updateStepsUI();
+      } else if (e.target.classList.contains("step-pause-input")) {
+        currentSteps[idx].pausa_ms = Number(e.target.value) || 0;
+        updateStepsUI();
+      }
+    });
+
+    document.getElementById("table-demo-steps")?.addEventListener("click", (e) => {
+      const btn = e.target.closest(".btn-remove-step");
+      if (btn) {
+        const idx = Number(btn.dataset.idx);
+        currentSteps.splice(idx, 1);
+        updateStepsUI();
+      }
+    });
+
+    document.getElementById("btn-reset-demo")?.addEventListener("click", () => {
+      currentSteps = [];
+      updateStepsUI();
+      document.getElementById("demo-name-input").value = "";
+      document.getElementById("demo-desc-input").value = "";
+    });
+
+    // Cargar demos existentes desde RDS
+    const loadDemosList = async () => {
+      const listDiv = document.getElementById("demo-existing-list");
+      if (!listDiv) return;
+      try {
+        const demos = await vehicleService.getDemos(targetVehicleId);
+        if (!demos || demos.length === 0) {
+          listDiv.innerHTML = `<div class="text-center py-4 text-secondary small">Sin rutinas registradas en este vehículo.</div>`;
+          return;
+        }
+
+        listDiv.innerHTML = demos.map(d => `
+          <div class="p-2 rounded bg-black border border-secondary d-flex justify-content-between align-items-center">
+            <div>
+              <strong class="text-light small d-block">${d.nombre}</strong>
+              <small class="text-secondary d-block" style="font-size: 0.72rem;">ID: #${d.id_demo} · ${d.descripcion || "Sin descripción"}</small>
+            </div>
+            <div class="d-flex gap-1">
+              <button class="btn btn-xs btn-outline-danger btn-delete-demo" data-id-demo="${d.id_demo}" title="Eliminar demo">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
+          </div>
+        `).join("");
+      } catch (err) {
+        listDiv.innerHTML = `<div class="text-danger small">Error al consultar demos: ${err.message}</div>`;
+      }
+    };
+
+    loadDemosList();
+    document.getElementById("btn-refresh-demos-list")?.addEventListener("click", loadDemosList);
+
+    // Eliminar demo
+    document.getElementById("demo-existing-list")?.addEventListener("click", async (e) => {
+      const btn = e.target.closest(".btn-delete-demo");
+      if (btn && confirm(`¿Deseas eliminar la rutina DEMO #${btn.dataset.idDemo}?`)) {
+        try {
+          await vehicleService.deleteDemo(targetVehicleId, btn.dataset.idDemo);
+          loadDemosList();
+        } catch (err) {
+          alert(`Error al eliminar: ${err.message}`);
+        }
+      }
+    });
+
+    // Guardar Demo y sus Pasos en RDS
+    document.getElementById("form-create-demo")?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const nombre = document.getElementById("demo-name-input").value.trim();
+      const descripcion = document.getElementById("demo-desc-input").value.trim();
+      const btnSave = document.getElementById("btn-save-demo");
+      const alertBox = document.getElementById("demo-alert-msg");
+
+      if (currentSteps.length === 0) {
+        alert("Agrega al menos un paso a la secuencia antes de guardar.");
+        return;
+      }
+
+      btnSave.disabled = true;
+      btnSave.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Persistiendo en RDS...`;
+      if (alertBox) alertBox.classList.add("d-none");
+
+      try {
+        // 1. Crear cabecera de la demo
+        const demoRes = await vehicleService.createDemo(targetVehicleId, { nombre, descripcion });
+        const idDemo = demoRes.id_demo;
+
+        // 2. Agregar cada movimiento
+        for (let i = 0; i < currentSteps.length; i++) {
+          const s = currentSteps[i];
+          await vehicleService.addMovimientoDemo(targetVehicleId, idDemo, {
+            id_comando: s.id_comando,
+            orden: i + 1,
+            duracion_ms: s.duracion_ms,
+            pausa_ms: s.pausa_ms
+          });
+        }
+
+        if (alertBox) {
+          alertBox.className = "alert alert-success py-2 small mt-2";
+          alertBox.textContent = `¡Rutina DEMO "${nombre}" (#${idDemo}) guardada con éxito con ${currentSteps.length} pasos en Amazon RDS!`;
+          alertBox.classList.remove("d-none");
+        }
+
+        // Limpiar formulario y recargar lista
+        document.getElementById("demo-name-input").value = "";
+        document.getElementById("demo-desc-input").value = "";
+        currentSteps = [];
+        updateStepsUI();
+        loadDemosList();
+
+      } catch (err) {
+        if (alertBox) {
+          alertBox.className = "alert alert-danger py-2 small mt-2";
+          alertBox.textContent = `Error al guardar rutina: ${err.message}`;
+          alertBox.classList.remove("d-none");
+        }
+      } finally {
+        btnSave.disabled = false;
+        btnSave.innerHTML = `<i class="bi bi-cloud-arrow-up-fill me-1"></i> Guardar Rutina en Amazon RDS`;
+      }
+    });
+  }
+
 }

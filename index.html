@@ -98,10 +98,10 @@
     <!-- VISTA 1: CONTROL (CABINA DUAL JOYSTICK)    -->
     <!-- ========================================== -->
     <div id="view-control" class="view-panel" role="tabpanel" aria-labelledby="tab-control">
-      <div class="row g-2 justify-content-center align-items-stretch">
-        
-        <!-- BANNER DE PRUEBA TEMPORAL PARA INVITADO -->
-        <div id="banner-guest-trial" class="col-12 col-md-10 col-lg-8 d-none">
+      
+      <!-- BANNER DE PRUEBA TEMPORAL PARA INVITADO (FILA INDEPENDIENTE) -->
+      <div id="banner-guest-trial" class="row justify-content-center mb-2 d-none">
+        <div class="col-12 col-md-10 col-lg-8">
           <div class="p-2 rounded-4 bg-dark border border-warning shadow-sm d-flex justify-content-between align-items-center flex-wrap gap-2">
             <div class="d-flex align-items-center gap-2">
               <span class="badge bg-warning text-dark"><i class="bi bi-person-badge-fill me-1"></i> INVITADO</span>
@@ -115,6 +115,10 @@
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- FILA DE JOYSTICKS SIMÉTRICOS -->
+      <div class="row g-2 justify-content-center align-items-stretch">
         
         <!-- JOYSTICK 1 (IZQUIERDA): CONTROL DIRECCIONAL -->
         <div class="col-6 col-md-5 col-lg-4">
@@ -406,6 +410,6 @@
   <!-- Bootstrap 5.3 JS Bundle -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <!-- Scripts Modulares ES6+ -->
-  <script type="module" src="./js/app.js?v=20261124_03"></script>
+  <script type="module" src="./js/app.js?v=20261124_04"></script>
 </body>
 </html>

@@ -303,6 +303,21 @@ class App {
     const btnAuth = document.getElementById("btn-auth-user");
     const formBox = document.getElementById("auth-form-container");
     const profileBox = document.getElementById("auth-profile-container");
+    const btnNavAdmin = document.querySelector('[data-nav-view="administracion"]');
+
+    const isAdmin = user && (user.rol === "ADMINISTRADOR" || user.rol === "ADMIN");
+
+    // Control de visibilidad RBAC estricto: Solo el Administrador ve y accede a Admin
+    if (btnNavAdmin) {
+      if (isAdmin) {
+        btnNavAdmin.classList.remove("d-none");
+      } else {
+        btnNavAdmin.classList.add("d-none");
+        if (this.navigation && this.navigation.currentView === "administracion") {
+          this.navigation.switchView("control");
+        }
+      }
+    }
 
     if (user) {
       const primerNombre = user.nombre_completo.split(" ")[0];

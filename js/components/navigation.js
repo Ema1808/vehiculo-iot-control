@@ -30,6 +30,21 @@ export class Navigation {
   }
 
   switchView(viewName) {
+    // Control de Acceso RBAC estricto: Solo ADMINISTRADOR puede acceder a administracion
+    if (viewName === "administracion") {
+      const userRaw = sessionStorage.getItem("iot_user");
+      let isAdmin = false;
+      if (userRaw) {
+        try {
+          const u = JSON.parse(userRaw);
+          isAdmin = u && (u.rol === "ADMINISTRADOR" || u.rol === "ADMIN");
+        } catch (_) {}
+      }
+      if (!isAdmin) {
+        viewName = "control";
+      }
+    }
+
     // Re-evaluar vistas por si se agregaron dinámicamente
     if (!this.views[viewName]) {
       this.views[viewName] = document.getElementById(`view-${viewName}`);

@@ -311,11 +311,13 @@ class App {
     const btnAuth = document.getElementById("btn-auth-user");
     const formBox = document.getElementById("auth-form-container");
     const profileBox = document.getElementById("auth-profile-container");
-    const btnNavAdmin = document.querySelector('[data-nav-view="administracion"]');
+    const btnNavAdmin = document.getElementById("nav-btn-admin");
+    const lblNavContent = document.getElementById("lbl-nav-admin-content");
     const guestBanner = document.getElementById("banner-guest-trial");
 
     const isAdmin = user && (user.rol === "ADMINISTRADOR" || user.rol === "ADMIN");
     const isGuest = user && user.rol === "INVITADO";
+    const isBuyer = user && (user.rol === "USUARIO" || user.rol === "COMPRADOR");
 
     // Banner de prueba para Invitado en vista Control
     if (guestBanner) {
@@ -326,14 +328,18 @@ class App {
       }
     }
 
-    // Control de visibilidad RBAC estricto: Solo el Administrador ve y accede a Admin
+    // Adaptación dinámica de la tercera pestaña según el Rol autenticado
     if (btnNavAdmin) {
-      if (isAdmin) {
-        btnNavAdmin.classList.remove("d-none");
-      } else {
-        btnNavAdmin.classList.add("d-none");
-        if (this.navigation && this.navigation.currentView === "administracion") {
-          this.navigation.switchView("control");
+      btnNavAdmin.classList.remove("d-none");
+      if (lblNavContent) {
+        if (isAdmin) {
+          lblNavContent.innerHTML = `<i class="bi bi-shield-lock me-1"></i> Admin`;
+        } else if (isBuyer) {
+          lblNavContent.innerHTML = `<i class="bi bi-truck me-1"></i> Mi Excavadora`;
+        } else if (isGuest) {
+          lblNavContent.innerHTML = `<i class="bi bi-stopwatch me-1"></i> Prueba (3 Min)`;
+        } else {
+          lblNavContent.innerHTML = `<i class="bi bi-person-lock me-1"></i> Portal`;
         }
       }
     }

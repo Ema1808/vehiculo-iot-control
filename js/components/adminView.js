@@ -432,7 +432,7 @@ export class AdminView {
                 <h3 class="h6 mb-1 text-warning fw-bold"><i class="bi bi-play-circle-fill me-1"></i> Unidad de Exhibición en Vivo</h3>
                 <small class="text-secondary">Reserva un turno exclusivo de 3 minutos para operar la Excavadora Expo desde la pestaña Control.</small>
               </div>
-              <button class="btn btn-warning fw-bold px-4 py-2" data-reservar-expo="2" id="btn-reservar-prueba">
+              <button class="btn btn-warning fw-bold px-4 py-2" data-reservar-expo="1" id="btn-reservar-prueba">
                 <i class="bi bi-stopwatch me-1"></i> Iniciar Prueba (3 Minutos)
               </button>
             </div>
@@ -518,40 +518,68 @@ export class AdminView {
     }
   }
 
-  async _handleReservarInvitado(idVehiculo) {
+  async _handleReservarInvitado(idVehiculo = 1) {
     const btn = document.getElementById("btn-reservar-prueba");
+    const btnBar = document.getElementById("btn-start-guest-trial-bar");
     if (btn) btn.disabled = true;
+    if (btnBar) {
+      btnBar.disabled = true;
+      btnBar.innerHTML = `<span class="spinner-border spinner-border-sm me-1" role="status"></span> Conectando...`;
+    }
 
     try {
       const res = await vehicleService.reservarPruebaInvitado(idVehiculo);
       const timerBox = document.getElementById("guest-timer-box");
       const countdownLbl = document.getElementById("lbl-guest-countdown");
+      const countdownBar = document.getElementById("lbl-guest-countdown-bar");
       if (timerBox) timerBox.classList.remove("d-none");
+      if (countdownBar) countdownBar.classList.remove("d-none");
+
+      if (btnBar) {
+        btnBar.innerHTML = `<i class="bi bi-play-circle-fill me-1"></i> Prueba en Curso`;
+      }
 
       if (typeof this.onSelectVehicle === "function") {
-        this.onSelectVehicle(idVehiculo, "Excavadora Expo (Prueba Invitado)");
+        this.onSelectVehicle(idVehiculo, "Excavadora IoT (Prueba Invitado)");
       }
 
       let seconds = res.segundos_restantes || 180;
       if (this.guestTimerInterval) clearInterval(this.guestTimerInterval);
+
+      const updateCountdownUI = (sec) => {
+        const m = String(Math.floor(sec / 60)).padStart(2, "0");
+        const s = String(sec % 60).padStart(2, "0");
+        const timeStr = `${m}:${s}`;
+        if (countdownLbl) countdownLbl.textContent = timeStr;
+        if (countdownBar) countdownBar.textContent = timeStr;
+      };
+
+      updateCountdownUI(seconds);
 
       this.guestTimerInterval = setInterval(() => {
         seconds--;
         if (seconds <= 0) {
           clearInterval(this.guestTimerInterval);
           if (countdownLbl) countdownLbl.textContent = "00:00 (Expirada)";
+          if (countdownBar) countdownBar.textContent = "00:00";
           alert("Tu sesión de prueba de 3 minutos ha concluido. El vehículo se ha detenido de forma segura.");
           if (btn) btn.disabled = false;
+          if (btnBar) {
+            btnBar.disabled = false;
+            btnBar.innerHTML = `<i class="bi bi-play-circle-fill me-1"></i> Iniciar Prueba (3 Min)`;
+          }
         } else {
-          const m = String(Math.floor(seconds / 60)).padStart(2, "0");
-          const s = String(seconds % 60).padStart(2, "0");
-          if (countdownLbl) countdownLbl.textContent = `${m}:${s}`;
+          updateCountdownUI(seconds);
         }
       }, 1000);
 
     } catch (e) {
       alert(`No se pudo reservar prueba: ${e.message}`);
       if (btn) btn.disabled = false;
+      if (btnBar) {
+        btnBar.disabled = false;
+        btnBar.innerHTML = `<i class="bi bi-play-circle-fill me-1"></i> Iniciar Prueba (3 Min)`;
+      }
     }
   }
 

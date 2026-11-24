@@ -127,6 +127,14 @@ class App {
       btnLight.addEventListener("click", () => this.handleToggleLight());
     }
 
+    // Botón Iniciar Prueba de Invitado (Desde la cabina de Control)
+    const btnStartGuest = document.getElementById("btn-start-guest-trial-bar");
+    if (btnStartGuest) {
+      btnStartGuest.addEventListener("click", () => {
+        this.adminView._handleReservarInvitado(1);
+      });
+    }
+
     // Botón refrescar diagnósticos, catálogo e historial
     const btnRefresh = document.getElementById("btn-refresh-status");
     if (btnRefresh) {
@@ -304,8 +312,19 @@ class App {
     const formBox = document.getElementById("auth-form-container");
     const profileBox = document.getElementById("auth-profile-container");
     const btnNavAdmin = document.querySelector('[data-nav-view="administracion"]');
+    const guestBanner = document.getElementById("banner-guest-trial");
 
     const isAdmin = user && (user.rol === "ADMINISTRADOR" || user.rol === "ADMIN");
+    const isGuest = user && user.rol === "INVITADO";
+
+    // Banner de prueba para Invitado en vista Control
+    if (guestBanner) {
+      if (isGuest) {
+        guestBanner.classList.remove("d-none");
+      } else {
+        guestBanner.classList.add("d-none");
+      }
+    }
 
     // Control de visibilidad RBAC estricto: Solo el Administrador ve y accede a Admin
     if (btnNavAdmin) {

@@ -128,21 +128,21 @@
           </div>
         </div>
 
-        <!-- JOYSTICK 2 (DERECHA): ACTUADORES (BRAZO Y PALA) -->
+        <!-- JOYSTICK 2 (DERECHA): ACTUADORES (BRAZO Y CARRO) -->
         <div class="col-6 col-md-5 col-lg-4">
           <div class="control-card p-2 rounded-4 border border-secondary text-center shadow h-100 d-flex flex-column justify-content-between">
             <div class="d-flex justify-content-between align-items-center mb-1">
-              <span class="badge bg-warning text-dark text-uppercase" style="font-size: 0.65rem;"><i class="bi bi-tools me-1"></i> Brazo y Pala</span>
+              <span class="badge bg-warning text-dark text-uppercase" style="font-size: 0.65rem;"><i class="bi bi-tools me-1"></i> Brazo y Carro</span>
               <small class="text-secondary font-monospace fw-bold" id="lbl-joystick-act-dir" style="font-size: 0.65rem;">NEUTRAL</small>
             </div>
 
             <!-- Contenedor del Joystick Táctil de Actuadores -->
-            <div id="joystick-act-zone" class="joystick-container my-auto touch-action-none" role="application" aria-label="Joystick de Actuadores">
+            <div id="joystick-act-zone" class="joystick-container my-auto touch-action-none" role="application" aria-label="Joystick de Brazo y Carro">
               <div id="joystick-act-base" class="joystick-base joystick-act-base">
                 <div class="joystick-guide-label guide-up" title="Subir Brazo"><i class="bi bi-arrow-up-circle-fill text-info"></i></div>
                 <div class="joystick-guide-label guide-down" title="Bajar Brazo"><i class="bi bi-arrow-down-circle-fill text-info"></i></div>
-                <div class="joystick-guide-label guide-left" title="Abrir Pala"><i class="bi bi-arrows-expand text-warning"></i></div>
-                <div class="joystick-guide-label guide-right" title="Cerrar Pala"><i class="bi bi-arrows-collapse text-warning"></i></div>
+                <div class="joystick-guide-label guide-left" title="Girar Carro a la Izquierda"><i class="bi bi-arrow-counterclockwise text-warning"></i></div>
+                <div class="joystick-guide-label guide-right" title="Girar Carro a la Derecha"><i class="bi bi-arrow-clockwise text-warning"></i></div>
                 <div id="joystick-act-knob" class="joystick-knob joystick-knob-act">
                   <i class="bi bi-tools"></i>
                 </div>
@@ -151,7 +151,7 @@
 
             <div class="text-secondary mt-1 font-monospace" style="font-size: 0.62rem; line-height: 1.2;">
               <span class="d-block text-truncate text-info">▲ Subir · ▼ Bajar Brazo</span>
-              <span class="d-block text-truncate text-warning">◄ Abrir · ► Cerrar Pala</span>
+              <span class="d-block text-truncate text-warning">◄ Giro Carro Izq · ► Giro Carro Der</span>
             </div>
           </div>
         </div>

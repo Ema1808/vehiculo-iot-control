@@ -65,7 +65,14 @@ class App {
         left: "ABRIR_PALA",
         right: "CERRAR_PALA"
       },
-      this.handleJoystickDirection.bind(this)
+      this.handleJoystickDirection.bind(this),
+      {
+        "NEUTRAL": "NEUTRAL",
+        "SUBIR_BRAZO": "SUBIR BRAZO",
+        "BAJAR_BRAZO": "BAJAR BRAZO",
+        "ABRIR_PALA": "GIRO CARRO IZQ",
+        "CERRAR_PALA": "GIRO CARRO DER"
+      }
     );
 
     // 3. Vista de Monitoreo
@@ -451,10 +458,22 @@ class App {
     if (this.isSending) return;
     this.isSending = true;
 
+    const friendlyName = {
+      "ABRIR_PALA": "Giro Carro Izquierda",
+      "CERRAR_PALA": "Giro Carro Derecha",
+      "SUBIR_BRAZO": "Subir Brazo",
+      "BAJAR_BRAZO": "Bajar Brazo",
+      "AVANZAR": "Avanzar",
+      "RETROCEDER": "Retroceder",
+      "GIRAR_IZQUIERDA": "Giro Izquierda",
+      "GIRAR_DERECHA": "Giro Derecha",
+      "DETENER": "Detener"
+    }[commandName] || commandName;
+
     try {
-      this.statusPanel.setActionMessage(`Transmitiendo: ${commandName}...`, "ENVIANDO", "bg-warning");
+      this.statusPanel.setActionMessage(`Transmitiendo: ${friendlyName}...`, "ENVIANDO", "bg-warning");
       const res = await vehicleService.enviarMovimiento(idComando, "WEB-CONTROL", CONFIG.VEHICLE_ID);
-      this.statusPanel.setActionMessage(`Ejecutado: ${commandName} (#${idComando})`, "OK", "bg-success");
+      this.statusPanel.setActionMessage(`Ejecutado: ${friendlyName} (#${idComando})`, "OK", "bg-success");
     } catch (e) {
       this.statusPanel.setActionMessage(`Fallo: ${e.message}`, "FALLO", "bg-danger");
     } finally {

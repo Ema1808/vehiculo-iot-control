@@ -3,7 +3,7 @@
  * Soporta cualquier diámetro de base, cálculo dinámico de zona muerta y mapeo de comandos.
  */
 export class VirtualJoystick {
-  constructor(baseId, knobId, labelId, directionMap, onDirectionChange) {
+  constructor(baseId, knobId, labelId, directionMap, onDirectionChange, displayMap = null) {
     this.base = document.getElementById(baseId);
     this.knob = document.getElementById(knobId);
     this.label = document.getElementById(labelId);
@@ -14,6 +14,7 @@ export class VirtualJoystick {
       right: "GIRAR_DERECHA"
     };
     this.onDirectionChange = onDirectionChange;
+    this.displayMap = displayMap;
 
     this.active = false;
     this.currentDirection = "NEUTRAL";
@@ -99,7 +100,7 @@ export class VirtualJoystick {
     if (this.currentDirection !== dir) {
       this.currentDirection = dir;
       if (this.label) {
-        this.label.textContent = dir;
+        this.label.textContent = (this.displayMap && this.displayMap[dir]) ? this.displayMap[dir] : dir;
       }
       if (typeof this.onDirectionChange === "function") {
         this.onDirectionChange(dir);
